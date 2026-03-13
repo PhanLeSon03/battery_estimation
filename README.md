@@ -2,6 +2,17 @@
 
 Sliding-window RUL (Remaining Useful Life) classification of lithium-ion batteries using the MIT-Stanford dataset. A CNN+GRU model classifies each window of cycles into one of 5 RUL classes.
 
+## RUL class boundaries
+
+| Class | Condition | Meaning |
+|-------|-----------|---------|
+| 0 | RUL > 400 | Early life |
+| 1 | 300 < RUL ≤ 400 | Mid-early life |
+| 2 | 200 < RUL ≤ 300 | Mid life |
+| 3 | 100 < RUL ≤ 200 | Late life |
+| 4 | RUL ≤ 100 | Near end of life |
+
+
 ---
 
 ## Table of Contents
@@ -106,16 +117,65 @@ Building val dataset...
   Class 4: 2760 samples
 Building test dataset...
 Model parameters: 48,421
+
+Epoch |   TrLoss |   TrAcc |   VaLoss |   VaAcc |       LR
+----------------------------------------------------------
+    1 |   0.5728 |  0.7562 |   0.7449 |  0.6709 | 9.96e-04
+    2 |   0.3936 |  0.8340 |   0.6347 |  0.7279 | 9.84e-04
+    3 |   0.3363 |  0.8578 |   0.5729 |  0.7711 | 9.65e-04
+    4 |   0.2903 |  0.8785 |   0.5611 |  0.7946 | 9.39e-04
+    5 |   0.2533 |  0.8949 |   0.5537 |  0.7849 | 9.05e-04
+    6 |   0.2331 |  0.9029 |   0.6297 |  0.7621 | 8.66e-04
+    7 |   0.2113 |  0.9125 |   0.6489 |  0.7642 | 8.21e-04
+    8 |   0.1914 |  0.9226 |   0.7100 |  0.7679 | 7.70e-04
+    9 |   0.1748 |  0.9301 |   0.7461 |  0.7631 | 7.16e-04
+   10 |   0.1581 |  0.9366 |   0.7857 |  0.7774 | 6.58e-04
+   11 |   0.1493 |  0.9427 |   0.8805 |  0.7567 | 5.98e-04
+   12 |   0.1378 |  0.9470 |   0.8117 |  0.7891 | 5.36e-04
+   13 |   0.1241 |  0.9523 |   0.9096 |  0.7761 | 4.74e-04
+   14 |   0.1194 |  0.9553 |   0.8454 |  0.7972 | 4.12e-04
+   15 |   0.1117 |  0.9592 |   0.9949 |  0.7797 | 3.52e-04
+   16 |   0.1023 |  0.9627 |   0.9698 |  0.7914 | 2.94e-04
+   17 |   0.0956 |  0.9652 |   1.0886 |  0.7698 | 2.40e-04
+   18 |   0.0906 |  0.9665 |   1.0653 |  0.7781 | 1.89e-04
+   19 |   0.0832 |  0.9696 |   1.1032 |  0.7783 | 1.44e-04
+   20 |   0.0815 |  0.9700 |   1.0869 |  0.7935 | 1.05e-04
+   21 |   0.0752 |  0.9724 |   1.1413 |  0.7787 | 7.12e-05
+   22 |   0.0728 |  0.9737 |   1.1490 |  0.7816 | 4.48e-05
+   23 |   0.0718 |  0.9740 |   1.1391 |  0.7929 | 2.56e-05
+   24 |   0.0700 |  0.9751 |   1.1659 |  0.7881 | 1.39e-05
+   25 |   0.0644 |  0.9764 |   1.1498 |  0.7889 | 1.00e-05
+
+============================================================
+Test Loss: 0.8454  Accuracy: 0.7972
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     RUL>400       0.92      0.85      0.89      2627
+     RUL>300       0.77      0.69      0.73      2697
+     RUL>200       0.67      0.79      0.73      2700
+     RUL>100       0.78      0.73      0.75      2700
+     RUL<100       0.86      0.93      0.89      2760
+
+    accuracy                           0.80     13484
+   macro avg       0.80      0.80      0.80     13484
+weighted avg       0.80      0.80      0.80     13484
+
+Confusion Matrix:
+[[2237  316   73    0    1]
+ [ 186 1856  570   32   53]
+ [   0  225 2123  341   11]
+ [   0    0  383 1960  357]
+ [   0    0    0  186 2574]]
 ```
-
-
 
 
 ### 3 — Inference & visualisation (notebook)
 Open `predict_clf.ipynb` and run all cells. Produces:
 - Per-cell sliding-window classification plot (3 panels)
 - Grid plot of all cells coloured by accuracy
-- EOL parity plot and error histogram
+- Near EOL (NEOL) parity plot and error histogram
 - Per-cell results table
 
 ---
@@ -172,16 +232,6 @@ dQ[c] = Qdlin[c] - Qdlin[ref=9]
 
 ### Balanced class sampling
 Each cell contributes an equal number of samples per RUL class. Valid window positions are grouped by their true RUL class, then `n_samples // 5` windows are drawn from each class independently — preventing the dominant RUL > 400 class from overwhelming training.
-
-### RUL class boundaries
-
-| Class | Condition | Meaning |
-|-------|-----------|---------|
-| 0 | RUL > 400 | Early life |
-| 1 | 300 < RUL ≤ 400 | Mid-early life |
-| 2 | 200 < RUL ≤ 300 | Mid life |
-| 3 | 100 < RUL ≤ 200 | Late life |
-| 4 | RUL ≤ 100 | Near end of life |
 
 ---
 
