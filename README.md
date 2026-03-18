@@ -218,10 +218,10 @@ concat ──► (B, 32, cnn_dim×2)
 | 6 | `dQdV_max` | Max of dQ/dV curve |
 | 7 | `dQdV_min` | Min of dQ/dV curve |
 | 8 | `dQdV_avg` | Mean of dQ/dV curve |
-| 9 | `10·log₁₀(std(Qdlin))` | Log-std of discharge capacity curve across voltage bins |
-| 10 | `10·log₁₀(std(T))` | Log-std of temperature within cycle |
-| 11 | `10·log₁₀(std(IR))` | Log-std of internal resistance within cycle |
-| 12 | `10·log₁₀(std(chargetime))` | Log-std of charge time within cycle |
+| 9 | `20·log₁₀(std(Qdlin))` | Log-std of discharge capacity curve across voltage bins |
+| 10 | `20·log₁₀(std(T))` | Log-std of temperature within cycle |
+| 11 | `20·log₁₀(std(IR))` | Log-std of internal resistance within cycle |
+| 12 | `20·log₁₀(std(chargetime))` | Log-std of charge time within cycle |
 | 13–16 | Sinusoidal PE | Position encoding: sin/cos at 2 frequencies |
 
 ### dQ sequence — 1000 features per cycle

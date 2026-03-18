@@ -44,7 +44,7 @@ def _load_npz_cell(path: str) -> dict:
         "cycle_life": int(d["cycle_life"]),
         "summary": {
             "QDischarge": d["qd"],
-            "IR":         d["ir"],
+            "IR":         d["IR"],
             "Tmax":       d["tmax"],
             "Tavg":       d["tavg"],
             "chargetime": d["chargetime"],
@@ -53,7 +53,7 @@ def _load_npz_cell(path: str) -> dict:
             "dqdv_avg":   d["dqdv_avg"],
             "log_std_dq":   d["log_std_dq"],
             "log_std_T":   d["log_std_T"],
-            "log_std_ir":   d["log_std_ir"],
+            "log_std_I":   d["log_std_I"],
             "log_std_ct":   d["log_std_ct"],
         },
         "qdlin": list(d["qdlin"]),   # list of (1000,) arrays 
@@ -78,7 +78,7 @@ def load_all_npz(content_dir: str) -> Tuple[dict, dict, dict]:
         except Exception as e:
             print(f"  WARNING: could not load {fname}: {e}")
 
-    print(f"Total — train: {len(b1) + len(b2)} cells  test: {len(b3)} cells\n")
+    # print(f"Total — train: {len(b1) + len(b2)} cells  test: {len(b3)} cells\n")
     return b1, b2, b3
 
 
@@ -111,7 +111,7 @@ def extract_clf_samples(cell: dict, n_samples: int = 10, seed: int = None) -> li
     dqdv_avg = np.array(summary["dqdv_avg"], dtype=np.float32).reshape(-1)
     log_std_dq = np.array(summary["log_std_dq"], dtype=np.float32).reshape(-1)
     log_std_T = np.array(summary["log_std_T"], dtype=np.float32).reshape(-1)
-    log_std_ir = np.array(summary["log_std_ir"], dtype=np.float32).reshape(-1)
+    log_std_I = np.array(summary["log_std_I"], dtype=np.float32).reshape(-1)
     log_std_ct = np.array(summary["log_std_ct"], dtype=np.float32).reshape(-1)
 
     n_cyc = min(len(qd) - 1, len(qdlin_list))   # usable cycles
@@ -131,7 +131,7 @@ def extract_clf_samples(cell: dict, n_samples: int = 10, seed: int = None) -> li
         out[:length] = q[:length] - ref_qdlin[:length]
         return out
     
-    def get_summary_row(c, d_pos=4):
+    def get_summary_row(c, d_pos=5):
         pos = c + 1
         def safe(arr):
             return float(arr[pos]) if pos < len(arr) else 0.0
@@ -139,16 +139,15 @@ def extract_clf_samples(cell: dict, n_samples: int = 10, seed: int = None) -> li
         pe  = np.array([
             np.sin(pos / 3000 ** (2 * i / d_pos)) if i % 2 == 0 else
             np.cos(pos / 3000 ** ((2 * i - 1) / d_pos))
-            for i in range(d_pos)
+            for i in range(1,d_pos)
         ], dtype=np.float32)   # (4,)
 
 
         scalar_feats = np.array([
             safe(qd), safe(ir), safe(tmx), safe(tav), safe(ct),
             safe(dqdv_max), safe(dqdv_min), safe(dqdv_avg),
-            safe(log_std_dq), safe(log_std_T), safe(log_std_ir), safe(log_std_ct),
+            safe(log_std_dq), safe(log_std_T), safe(log_std_I), safe(log_std_ct),
         ], dtype=np.float32)   # (12,)
-
         return np.concatenate([scalar_feats, pe])   # (16,)
 
 

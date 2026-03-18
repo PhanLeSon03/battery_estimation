@@ -25,6 +25,42 @@ from dataset_clf import build_clf_dataloaders, N_CLASSES, N_INPUT
 import joblib
 
 
+class OrdinalLoss(nn.Module):
+    """
+    Takes raw logits (B, 5) — same as CrossEntropyLoss.
+    Converts to cumulative probabilities internally using softmax.
+
+    P(y > k) = sum_{j=k+1}^{K-1} softmax(logits)_j
+    """
+    def __init__(self, n_classes: int = 5, reduction: str = 'mean'):
+        super().__init__()
+        self.K         = n_classes
+        self.reduction = reduction
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+
+        probs = torch.softmax(logits, dim=1)   # (B, 5)
+
+        cum = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]   # (B, K-1)
+
+        thresholds = torch.arange(self.K - 1, device=targets.device)
+        labels     = (targets.unsqueeze(1) > thresholds).float()   # (B, K-1)
+
+        loss = F.binary_cross_entropy(cum.clamp(1e-7, 1 - 1e-7), labels, reduction='none')
+        loss = loss.sum(dim=1) 
+
+        return loss.mean() if self.reduction == 'mean' else loss.sum()
+
+
+def predict_cls(logits: torch.Tensor) -> torch.Tensor:
+    probs = torch.softmax(logits, dim=-1)
+    return probs.argmax(dim=-1)
+
+def ordinal_predict(logits: torch.Tensor) -> torch.Tensor:
+    probs = torch.softmax(logits, dim=1)
+    cum   = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]   # (B, 4)
+    return (cum > 0.5).sum(dim=1).long()                # (B,)
+
 # -------------------------------------------------------------------------
 # Model
 # -------------------------------------------------------------------------
@@ -86,28 +122,24 @@ class BatteryRULClassifier(nn.Module):
 # -------------------------------------------------------------------------
 # Train one epoch
 # -------------------------------------------------------------------------
-def train_epoch(model, loader, criterion, optimizer, device):
+def train_epoch(model, loader, criterion, pred_fn, optimizer, device):
     model.train()
     total_loss = 0.0
     correct    = 0
     total      = 0
-
     for batch in loader:
         dq      = batch["dq"].to(device)
         summary = batch["summary"].to(device)
         labels  = batch["label"].to(device)
-
         optimizer.zero_grad()
-        logits = model(dq, summary)
-        loss   = criterion(logits, labels)
+        out  = model(dq, summary)
+        loss = criterion(out, labels)
         loss.backward()
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
-
         total_loss += loss.item() * len(labels)
-        correct    += (logits.argmax(dim=1) == labels).sum().item()
+        correct    += (pred_fn(out) == labels).sum().item()
         total      += len(labels)
-
     return total_loss / total, correct / total
 
 
@@ -115,29 +147,24 @@ def train_epoch(model, loader, criterion, optimizer, device):
 # Evaluate
 # -------------------------------------------------------------------------
 @torch.no_grad()
-def evaluate(model, loader, criterion, device):
+def evaluate(model, loader, criterion, pred_fn, device):
     model.eval()
     total_loss = 0.0
     all_pred   = []
     all_true   = []
-
     for batch in loader:
         dq      = batch["dq"].to(device)
         summary = batch["summary"].to(device)
         labels  = batch["label"].to(device)
-
-        logits = model(dq, summary)
-        loss   = criterion(logits, labels)
-
+        out     = model(dq, summary)
+        loss    = criterion(out, labels)
         total_loss += loss.item() * len(labels)
-        all_pred.extend(logits.argmax(dim=1).cpu().numpy())
+        all_pred.extend(pred_fn(out).cpu().numpy())
         all_true.extend(labels.cpu().numpy())
-
     all_pred = np.array(all_pred)
     all_true = np.array(all_true)
-    acc      = (all_pred == all_true).mean()
+    return total_loss / len(all_true), (all_pred == all_true).mean(), all_pred, all_true
 
-    return total_loss / len(all_true), acc, all_pred, all_true
 
 
 # -------------------------------------------------------------------------
@@ -161,20 +188,33 @@ def train(args):
     # save right after building train dataset
     joblib.dump(dq_scaler,      os.path.join(args.output_dir, "dq_scaler.pkl"))
     joblib.dump(summary_scaler, os.path.join(args.output_dir, "summary_scaler.pkl"))
+    
+    summary_feats = summary_scaler.n_features_in_
+    print(f"summary_feats: {summary_feats}") 
 
     model = BatteryRULClassifier(
         cnn_dim       = args.cnn_dim,
         gru_dim       = args.gru_dim,
         gru_layers    = args.gru_layers,
-        summary_feats = 16,
+        summary_feats = summary_feats,
         n_classes     = N_CLASSES,
         dropout       = args.dropout,
     ).to(device)
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model parameters: {n_params:,}\n")
+    
+    # ── Loss function ─────────────────────────────────────────────────────────
+    use_ordinal = use_ordinal = args.loss == "ordinal"
+    if use_ordinal:
+        criterion  = OrdinalLoss(n_classes=N_CLASSES)
+        pred_fn    = predict_cls
+        print("Loss: OrdinalLoss (N-1 sigmoid thresholds)\n")
+    else:
+        criterion  = nn.CrossEntropyLoss()
+        pred_fn    = lambda logits: logits.argmax(dim=1)
+        print("Loss: CrossEntropyLoss\n")
 
-    criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, T_max=args.epochs, eta_min=args.lr * 0.01
@@ -187,8 +227,8 @@ def train(args):
     print("-" * len(header))
 
     for epoch in range(1, args.epochs + 1):
-        tr_loss, tr_acc          = train_epoch(model, train_loader, criterion, optimizer, device)
-        va_loss, va_acc, _, _    = evaluate(model, val_loader, criterion, device)
+        tr_loss, tr_acc          = train_epoch(model, train_loader, criterion, pred_fn, optimizer, device)
+        va_loss, va_acc, _, _    = evaluate(model, val_loader, criterion, pred_fn, device)
         scheduler.step()
 
         lr = optimizer.param_groups[0]["lr"]
@@ -203,9 +243,9 @@ def train(args):
     # ---- Test ----
     print("\n" + "=" * 60)
     model.load_state_dict(
-        torch.load(os.path.join(args.output_dir, "best_clf.pt"), map_location=device)
+        torch.load(os.path.join(args.output_dir, "best_clf.pt"), map_location=device, weights_only=False)
     )
-    te_loss, te_acc, pred, true = evaluate(model, test_loader, criterion, device)
+    te_loss, te_acc, pred, true = evaluate(model, test_loader, criterion, pred_fn, device)
 
     print(f"\nTest Loss: {te_loss:.4f}  Accuracy: {te_acc:.4f}")
     print("\nClassification Report:")
@@ -235,6 +275,9 @@ if __name__ == "__main__":
     parser.add_argument("--gru_layers",  type=int,   default=2)
     parser.add_argument("--dropout",     type=float, default=0.1)
     parser.add_argument("--num_workers", type=int,   default=0)
+    parser.add_argument("--loss", default="ordinal",
+                    choices=["cross_entropy", "ordinal"],
+                    help="Loss function: ordinal or cross_entropy")
     args = parser.parse_args()
 
     train(args)
