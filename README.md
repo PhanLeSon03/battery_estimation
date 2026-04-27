@@ -89,15 +89,143 @@ Move data to folder ./data
 
 ## Usage
 
-### 1 — Extract features from raw .mat files
+## Step-by-step workflows
+
+### MIT workflow from Raw/Raw_MIT
+
+Use this path when training on the MIT `.mat` files.
+
+1. Put the three raw MIT `.mat` files in `Raw/Raw_MIT/`:
 ```bash
-python gen_features.py --data_dir ./data --out_dir ./content
+Raw/Raw_MIT/2017-05-12_batchdata_updated_struct_errorcorrect.mat
+Raw/Raw_MIT/2017-06-30_batchdata_updated_struct_errorcorrect.mat
+Raw/Raw_MIT/2018-04-12_batchdata_updated_struct_errorcorrect.mat
+```
+
+2. Generate MIT feature files:
+```bash
+python gen_features.py --data_dir Raw/Raw_MIT --out_dir content
+```
+
+This creates one `.npz` file per MIT cell:
+```bash
+content/batch1c000.npz
+content/batch1c001.npz
+...
+```
+
+3. Build and check the MIT classification dataset:
+```bash
+python dataset_clf.py --content_dir content
+```
+
+This prints the train/validation/test sample counts and tensor shapes. The training script uses the same dataset builder internally.
+
+4. Train the MIT classifier:
+```bash
+python train_clf.py --content_dir content --output_dir checkpoints_clf
+```
+
+Main outputs:
+```bash
+checkpoints_clf/best_clf.pt
+checkpoints_clf/dq_scaler.pkl
+checkpoints_clf/summary_scaler.pkl
+checkpoints_clf/clf_pred.npy
+checkpoints_clf/clf_true.npy
+```
+
+### BML workflow from Raw/Raw_BML
+
+Use this path when training on BatteryML `.pkl` files. BML files do not consistently contain temperature or internal resistance, so the BML pipeline skips those features.
+
+1. Keep the BML raw folder structure:
+```bash
+Raw/Raw_BML/CALB/*.pkl
+Raw/Raw_BML/XJTU/*.pkl
+Raw/Raw_BML/Tongji/*.pkl
+...
+Raw/Raw_BML/Life labels/*.json
+```
+
+2. Generate BML feature files:
+```bash
+python gen_features_bml.py --data_dir Raw/Raw_BML --out_dir content_bml
+```
+
+The output mirrors the raw subfolders:
+```bash
+Raw/Raw_BML/CALB/CALB_0_B182.pkl
+-> content_bml/CALB/CALB_0_B182.npz
+
+Raw/Raw_BML/XJTU/XJTU_3C_battery-11.pkl
+-> content_bml/XJTU/XJTU_3C_battery-11.npz
+```
+
+For a quick smoke test, convert only a few files:
+```bash
+python gen_features_bml.py --data_dir Raw/Raw_BML --out_dir content_bml_smoke --max_files 5
+```
+
+3. Build and check the BML classification dataset:
+```bash
+python dataset_clf_bml.py --content_dir content_bml
+```
+
+To check one BML subfolder only:
+```bash
+python dataset_clf_bml.py --content_dir content_bml/CALB
+```
+
+This prints the train/validation/test sample counts and tensor shapes. The training script uses the same dataset builder internally.
+
+4. Train on all generated BML folders:
+```bash
+python train_clf_bml.py --content_dir content_bml --output_dir checkpoints_clf_bml
+```
+
+5. Train on only one BML subfolder:
+```bash
+python train_clf_bml.py --content_dir content_bml/CALB --output_dir checkpoints_clf_bml_CALB
+```
+
+Main outputs:
+```bash
+checkpoints_clf_bml/best_clf_bml.pt
+checkpoints_clf_bml/dq_scaler_bml.pkl
+checkpoints_clf_bml/summary_scaler_bml.pkl
+checkpoints_clf_bml/clf_pred_bml.npy
+checkpoints_clf_bml/clf_true_bml.npy
+```
+
+### Script reference
+
+| Script | What it does | Typical command |
+|--------|--------------|-----------------|
+| `download.py` | Downloads the MIT battery dataset with `kagglehub`. Move the downloaded `.mat` files into `Raw/Raw_MIT` after download. | `python download.py` |
+| `gen_features.py` | Converts MIT `.mat` files into per-cell `.npz` feature files. Includes MIT features such as discharge capacity, IR, temperature, charge time, dQ/dV, and curve statistics. | `python gen_features.py --data_dir Raw/Raw_MIT --out_dir content` |
+| `dataset_clf.py` | Builds and checks MIT train/validation/test dataloaders from generated `.npz` files. It samples 32-cycle windows, assigns RUL classes, scales features, and prints tensor shapes. | `python dataset_clf.py --content_dir content` |
+| `train_clf.py` | Trains the CNN+GRU RUL classifier on MIT-generated `.npz` files. | `python train_clf.py --content_dir content --output_dir checkpoints_clf` |
+| `gen_features_bml.py` | Converts BatteryML `.pkl` files into per-cell `.npz` feature files. It skips temperature and internal resistance. Charge time uses positive-current samples; discharge features use negative-current samples. | `python gen_features_bml.py --data_dir Raw/Raw_BML --out_dir content_bml` |
+| `dataset_clf_bml.py` | Builds and checks BML train/validation/test dataloaders from generated `.npz` files. It reads recursively, so `content_bml` or one subfolder such as `content_bml/CALB` both work. | `python dataset_clf_bml.py --content_dir content_bml/CALB` |
+| `train_clf_bml.py` | Trains the CNN+GRU RUL classifier on BML-generated `.npz` files. | `python train_clf_bml.py --content_dir content_bml --output_dir checkpoints_clf_bml` |
+
+### Example MIT run output
+
+#### 1 - Extract features from raw .mat files
+```bash
+python gen_features.py --data_dir Raw/Raw_MIT --out_dir content
 ```
 Saves one `.npz` per cell under `./content/`. Only needs to run once.
 
-### 2 — Train
+#### 2 - Build and check dataset
 ```bash
-python train_clf.py --content_dir ./content --output_dir ./checkpoints_clf
+python dataset_clf.py --content_dir content
+```
+
+#### 3 - Train
+```bash
+python train_clf.py --content_dir content --output_dir checkpoints_clf
 ```
 
 ```
@@ -239,17 +367,23 @@ Each cell contributes an equal number of samples per RUL class. Valid window pos
 
 ```
 battery-rul-clf/
-├── data/                   # raw .mat files (not committed)
-│   ├── batch1.mat
-│   ├── batch2.mat
-│   └── batch3.mat
-├── content/                # extracted .npz features (generated)
-├── checkpoints_clf/        # saved model weights (generated)
+├── Raw/
+│   ├── Raw_MIT/             # MIT .mat files
+│   └── Raw_BML/             # BML subfolders with .pkl files and life labels
+├── content/                 # generated MIT .npz features
+├── content_bml/             # generated BML .npz features, grouped by source subfolder
+├── checkpoints_clf/         # generated MIT model outputs
 │   └── best_clf.pt
-├── gen_features.py         # .mat → .npz feature extraction
-├── dataset_clf.py          # classification dataset & dataloader
-├── train_clf.py            # training loop + BatteryRULClassifier model
-├── predict_clf.ipynb       # inference & visualisation notebook
+├── checkpoints_clf_bml/     # generated BML model outputs
+│   └── best_clf_bml.pt
+├── download.py              # download MIT dataset with kagglehub
+├── gen_features.py          # MIT .mat -> .npz feature extraction
+├── dataset_clf.py           # MIT classification dataset and dataloader
+├── train_clf.py             # MIT training loop
+├── gen_features_bml.py      # BML .pkl -> .npz feature extraction
+├── dataset_clf_bml.py       # BML classification dataset and dataloader
+├── train_clf_bml.py         # BML training loop
+├── predict_clf.ipynb        # inference and visualisation notebook
 └── README.md
 ```
 
