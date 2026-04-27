@@ -400,3 +400,24 @@ battery-rul-clf/
   doi     = {10.1038/s41560-019-0356-8}
 }
 ```
+
+```bibtex
+@inproceedings{10.1145/3711896.3737372,
+  author    = {Tan, Ruifeng and Hong, Weixiang and Tang, Jiayue and Lu, Xibin
+               and Ma, Ruijun and Zheng, Xiang and Li, Jia and Huang, Jiaqiang
+               and Zhang, Tong-Yi},
+  title     = {BatteryLife: A Comprehensive Dataset and Benchmark for Battery Life Prediction},
+  year      = {2025},
+  isbn      = {9798400714542},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/3711896.3737372},
+  doi       = {10.1145/3711896.3737372},
+  booktitle = {Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery
+               and Data Mining V.2},
+  pages     = {5789--5800},
+  numpages  = {12},
+  location  = {Toronto ON, Canada},
+  series    = {KDD '25}
+}
+```
