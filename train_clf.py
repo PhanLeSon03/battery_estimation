@@ -38,17 +38,12 @@ class OrdinalLoss(nn.Module):
         self.reduction = reduction
 
     def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-
-        probs = torch.softmax(logits, dim=1)   # (B, 5)
-
-        cum = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]   # (B, K-1)
-
+        probs = torch.softmax(logits, dim=1)                          # (B, 5)
+        cum   = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]             # (B, K-1)
         thresholds = torch.arange(self.K - 1, device=targets.device)
-        labels     = (targets.unsqueeze(1) > thresholds).float()   # (B, K-1)
-
+        labels     = (targets.unsqueeze(1) > thresholds).float()     # (B, K-1)
         loss = F.binary_cross_entropy(cum.clamp(1e-7, 1 - 1e-7), labels, reduction='none')
-        loss = loss.sum(dim=1) 
-
+        loss = loss.sum(dim=1)
         return loss.mean() if self.reduction == 'mean' else loss.sum()
 
 
@@ -60,6 +55,11 @@ def ordinal_predict(logits: torch.Tensor) -> torch.Tensor:
     probs = torch.softmax(logits, dim=1)
     cum   = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]   # (B, 4)
     return (cum > 0.5).sum(dim=1).long()                # (B,)
+
+
+# -------------------------------------------------------------------------
+# Per-channel 1D CNN — separate filters for each input channel
+
 
 # -------------------------------------------------------------------------
 # Model
@@ -85,39 +85,41 @@ class BatteryRULClassifier(nn.Module):
             nn.AdaptiveAvgPool1d(1),
         )
 
+
         self.summary_proj = nn.Sequential(
             nn.Linear(summary_feats, cnn_dim),
-            nn.GELU(),
+            nn.ELU(),
             nn.Dropout(dropout),
         )
 
         self.gru = nn.GRU(
-            input_size    = cnn_dim * 2,
+            input_size    = cnn_dim + cnn_dim,      # 2 channels × cnn_dim each + summary proj cnn_dim
             hidden_size   = gru_dim,
             num_layers    = gru_layers,
             batch_first   = True,
             bidirectional = True,
-            dropout        = dropout if gru_layers > 1 else 0.0,
+            dropout       = dropout if gru_layers > 1 else 0.0,
         )
 
         self.post_gru_drop = nn.Dropout(dropout)
 
         self.head = nn.Sequential(
-            nn.Linear(gru_dim * 2, 32), nn.GELU(), nn.Dropout(dropout),
+            nn.Linear(gru_dim * 2, 32), nn.ELU(), nn.Dropout(dropout),
             nn.Linear(32, n_classes),
         )
 
     def forward(self, dq: torch.Tensor, summary: torch.Tensor) -> torch.Tensor:
-        B, T, _ = dq.shape
+        B, T, C, F = dq.shape                                       
 
-        dq_feat      = self.cnn(dq.reshape(B * T, 1, -1)).squeeze(-1).reshape(B, T, -1)
+        dq_feat      = self.cnn(dq.reshape(B * T, C, F)).squeeze(-1).reshape(B, T, -1)
         summary_feat = self.summary_proj(summary)
 
-        fused        = self.post_gru_drop(torch.cat([dq_feat, summary_feat], dim=-1))
-        _, h_n       = self.gru(fused)
-        h_last       = self.post_gru_drop(torch.cat([h_n[-2], h_n[-1]], dim=-1))
+        fused    = self.post_gru_drop(torch.cat([dq_feat, summary_feat], dim=-1))
+        out, h_n = self.gru(fused)
+        h_last   = self.post_gru_drop(torch.cat([h_n[-2], h_n[-1]], dim=-1))
 
         return self.head(h_last)
+
 
 # -------------------------------------------------------------------------
 # Train one epoch
@@ -135,7 +137,7 @@ def train_epoch(model, loader, criterion, pred_fn, optimizer, device):
         out  = model(dq, summary)
         loss = criterion(out, labels)
         loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+        # nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
         optimizer.step()
         total_loss += loss.item() * len(labels)
         correct    += (pred_fn(out) == labels).sum().item()
@@ -166,7 +168,6 @@ def evaluate(model, loader, criterion, pred_fn, device):
     return total_loss / len(all_true), (all_pred == all_true).mean(), all_pred, all_true
 
 
-
 # -------------------------------------------------------------------------
 # Main
 # -------------------------------------------------------------------------
@@ -180,17 +181,16 @@ def train(args):
         content_dir = args.content_dir,
         batch_size  = args.batch_size,
         n_samples   = args.n_samples,
-        val_ratio   = 0.1,
+        val_ratio   = 0.2,
         num_workers = args.num_workers,
     )
-    
+
     dq_scaler, summary_scaler = scalers
-    # save right after building train dataset
     joblib.dump(dq_scaler,      os.path.join(args.output_dir, "dq_scaler.pkl"))
     joblib.dump(summary_scaler, os.path.join(args.output_dir, "summary_scaler.pkl"))
-    
+
     summary_feats = summary_scaler.n_features_in_
-    print(f"summary_feats: {summary_feats}") 
+    print(f"summary_feats: {summary_feats}")
 
     model = BatteryRULClassifier(
         cnn_dim       = args.cnn_dim,
@@ -203,21 +203,60 @@ def train(args):
 
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model parameters: {n_params:,}\n")
-    
+
+    # ── Layer-by-layer summary ────────────────────────────────────────────────
+    print("Model Summary:")
+    print("=" * 80)
+    print(f"  {'Layer':<38} {'Output Shape':<25} {'Params':>10}")
+    print("-" * 80)
+
+    _handles = []
+    _summary = []
+
+    def _hook(module, inp, out):
+        if len(list(module.children())) == 0:          # leaf modules only
+            n = sum(p.numel() for p in module.parameters())
+            shape = tuple(out.shape) if isinstance(out, torch.Tensor) else "?"
+            _summary.append((module.__class__.__name__, shape, n))
+
+    for m in model.modules():
+        _handles.append(m.register_forward_hook(_hook))
+
+    from gen_features import V_BINS as _V
+    _dummy_dq      = torch.zeros(1, N_INPUT, 1, _V,         device=device)
+    _dummy_summary = torch.zeros(1, N_INPUT, summary_feats, device=device)
+    with torch.no_grad():
+        model(_dummy_dq, _dummy_summary)
+
+    for h in _handles:
+        h.remove()
+
+    for name, shape, n in _summary:
+        print(f"  {name:<38} {str(shape):<25} {n:>10,}")
+
+    print("=" * 80)
+    print(f"  {'Total trainable parameters':<38} {'':25} {n_params:>10,}")
+    print("=" * 80 + "\n")
+
     # ── Loss function ─────────────────────────────────────────────────────────
-    use_ordinal = use_ordinal = args.loss == "ordinal"
+    use_ordinal = args.loss == "ordinal"
     if use_ordinal:
-        criterion  = OrdinalLoss(n_classes=N_CLASSES)
-        pred_fn    = predict_cls
+        criterion = OrdinalLoss(n_classes=N_CLASSES)
+        pred_fn   = predict_cls
         print("Loss: OrdinalLoss (N-1 sigmoid thresholds)\n")
     else:
-        criterion  = nn.CrossEntropyLoss()
-        pred_fn    = lambda logits: logits.argmax(dim=1)
+        criterion = nn.CrossEntropyLoss()
+        pred_fn   = lambda logits: logits.argmax(dim=1)
         print("Loss: CrossEntropyLoss\n")
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-        optimizer, T_max=args.epochs, eta_min=args.lr * 0.01
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-3)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode     = 'max',
+        factor   = 0.5,
+        patience = 3,
+        min_lr   = args.lr * 0.01,
+        verbose  = True,
     )
 
     best_val_acc = 0.0
@@ -227,9 +266,9 @@ def train(args):
     print("-" * len(header))
 
     for epoch in range(1, args.epochs + 1):
-        tr_loss, tr_acc          = train_epoch(model, train_loader, criterion, pred_fn, optimizer, device)
-        va_loss, va_acc, _, _    = evaluate(model, val_loader, criterion, pred_fn, device)
-        scheduler.step()
+        tr_loss, tr_acc       = train_epoch(model, train_loader, criterion, pred_fn, optimizer, device)
+        va_loss, va_acc, _, _ = evaluate(model, val_loader, criterion, pred_fn, device)
+        scheduler.step(va_acc)
 
         lr = optimizer.param_groups[0]["lr"]
         print(f"{epoch:5d} | {tr_loss:8.4f} | {tr_acc:7.4f} | "
@@ -243,7 +282,8 @@ def train(args):
     # ---- Test ----
     print("\n" + "=" * 60)
     model.load_state_dict(
-        torch.load(os.path.join(args.output_dir, "best_clf.pt"), map_location=device, weights_only=False)
+        torch.load(os.path.join(args.output_dir, "best_clf.pt"),
+                   map_location=device, weights_only=True)
     )
     te_loss, te_acc, pred, true = evaluate(model, test_loader, criterion, pred_fn, device)
 

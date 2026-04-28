@@ -27,7 +27,7 @@ import argparse
 import numpy as np
 import h5py
 
-V_BINS = 1000
+V_BINS       = 1000
 
 MAT_FILES = {
     "2017-05-12_batchdata_updated_struct_errorcorrect.mat": "batch1",
@@ -107,8 +107,9 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
 
                 cyc_grp  = f[batch["cycles"][i, 0]]
                 qdlin_ds = cyc_grp["Qdlin"]
-                dqdv_ds  = cyc_grp["discharge_dQdV"]
+                discharge_dqdv_ds  = cyc_grp["discharge_dQdV"]
                 qd_ds    = cyc_grp["Qd"]
+                qc_ds    = cyc_grp["Qc"]
                 T_ds     = cyc_grp["T"]
                 I_ds    = cyc_grp["I"]
                 ct_ds    = cyc_grp["t"]
@@ -116,15 +117,17 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                 
                 n_cyc    = qdlin_ds.shape[0]
 
-                qdlin_list = []
-                dqdv_list  = []
-                dqdv_max   = []
-                dqdv_min   = []
-                dqdv_avg   = []
-                log_std_dq = [] #float(10.0 * np.log10(max(safe(qdlin_std), 1e-9)))
-                log_std_T  = [] #float(10.0 * np.log10(max(safe(tmx),       1e-9)))
-                log_std_I = [] #float(10.0 * np.log10(max(safe(I),        1e-9)))
-                log_std_ct = [] #float(10.0 * np.log10(max(safe(ct),        1e-9)))
+                qdlin_list       = []
+                dqdv_list        = []
+                dqdv_slope_max   = []
+                dqdv_slope_min   = []
+                dqdv_min         = []
+                dqdv_avg         = []
+                log_std_dq       = [] 
+                log_std_dc       = [] 
+                log_std_T        = [] 
+                log_std_I        = [] 
+                log_std_ct       = []
 
                 for j in range(n_cyc):
                     try:
@@ -139,7 +142,7 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                         
                         
                     try:
-                        curve = _deref_qdlin(f, dqdv_ds[j, 0])
+                        curve = _deref_qdlin(f, discharge_dqdv_ds[j, 0])
                         if len(curve) != V_BINS:
                             tmp = np.zeros(V_BINS, dtype=np.float32)
                             tmp[:min(len(curve), V_BINS)] = curve[:V_BINS]
@@ -149,24 +152,37 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                         dqdv_list.append(np.zeros(V_BINS, dtype=np.float32))
                         
                     try:
-                        dqdv = _interp_nan(f[dqdv_ds[j, 0]][()].flatten().astype(np.float32))
+                        dqdv  = _interp_nan(f[discharge_dqdv_ds[j, 0]][()].flatten().astype(np.float32))
                         qd_c  = _interp_nan(f[qd_ds[j, 0]][()].flatten().astype(np.float32))
+                        qc_c  = _interp_nan(f[qc_ds[j, 0]][()].flatten().astype(np.float32))
                         T_c   = _interp_nan(f[T_ds[j, 0]][()].flatten().astype(np.float32))
-                        I_c  = _interp_nan(f[I_ds[j, 0]][()].flatten().astype(np.float32))
+                        I_c   = _interp_nan(f[I_ds[j, 0]][()].flatten().astype(np.float32))
                         ct_c  = _interp_nan(f[ct_ds[j, 0]][()].flatten().astype(np.float32))
-
-                        dqdv_max.append(float(np.max(dqdv)))
+                        
+                        dqdv  = dqdv[100:900] # get midle window
+   
+                                             
+                        
+                        dqdv = np.convolve(dqdv, np.ones(10)/10, mode='valid') 
+                        dqdv_slope = np.diff(dqdv)
+                        
+                        dqdv_slope_max.append(float(np.max(dqdv_slope)))
+                        dqdv_slope_min.append(float(np.min(dqdv_slope)))
                         dqdv_min.append(float(np.min(dqdv)))
                         dqdv_avg.append(float(np.mean(dqdv)))
                         log_std_dq.append(float(20.0 * np.log10(np.std(qd_c).clip(1e-9))))
+                        log_std_dc.append(float(20.0 * np.log10(np.std(qc_c).clip(1e-9))))
                         log_std_T.append( float(20.0 * np.log10(np.std(T_c).clip(1e-9))))
                         log_std_I.append(float(20.0 * np.log10(np.std(I_c).clip(1e-9))))
                         log_std_ct.append(float(20.0 * np.log10(np.std(ct_c).clip(1e-9))))
+                        
                     except Exception:
-                        dqdv_max.append(0.0)
+                        dqdv_slope_max.append(0.0)
+                        dqdv_slope_min.append(0.0)
                         dqdv_min.append(0.0)
                         dqdv_avg.append(0.0)
                         log_std_dq.append(0.0)
+                        log_std_dc.append(0.0)
                         log_std_T.append(0.0)
                         log_std_I.append(0.0)
                         log_std_ct.append(0.0)
@@ -181,10 +197,12 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                     tmax       = tmax,
                     tavg       = tavg,
                     chargetime = chargetime,
-                    dqdv_max   = np.array(dqdv_max, dtype=np.float32),
+                    dqdv_slope_max   = np.array(dqdv_slope_max, dtype=np.float32),
+                    dqdv_slope_min   = np.array(dqdv_slope_min, dtype=np.float32),
                     dqdv_min   = np.array(dqdv_min, dtype=np.float32),
                     dqdv_avg   = np.array(dqdv_avg, dtype=np.float32),
                     log_std_dq = _interp_nan(np.array(log_std_dq, dtype=np.float32)),
+                    log_std_dc = _interp_nan(np.array(log_std_dc, dtype=np.float32)),
                     log_std_T = _interp_nan(np.array(log_std_T, dtype=np.float32)),
                     log_std_I = _interp_nan(np.array(log_std_I, dtype=np.float32)),
                     log_std_ct = _interp_nan(np.array(log_std_ct, dtype=np.float32)),
