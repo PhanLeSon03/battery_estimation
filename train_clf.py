@@ -10,6 +10,7 @@ Classes:
 
 Usage:
     python train_clf.py --content_dir ./content --output_dir ./checkpoints_clf
+    python train_clf.py --content_dir ./content_bml --output_dir ./checkpoints_clf_bml
 """
 
 import os
@@ -56,9 +57,6 @@ def ordinal_predict(logits: torch.Tensor) -> torch.Tensor:
     cum   = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]   # (B, 4)
     return (cum > 0.5).sum(dim=1).long()                # (B,)
 
-
-# -------------------------------------------------------------------------
-# Per-channel 1D CNN — separate filters for each input channel
 
 
 # -------------------------------------------------------------------------
@@ -181,7 +179,7 @@ def train(args):
         content_dir = args.content_dir,
         batch_size  = args.batch_size,
         n_samples   = args.n_samples,
-        val_ratio   = 0.2,
+        val_ratio   = 0.1,
         num_workers = args.num_workers,
     )
 

@@ -28,12 +28,33 @@ import numpy as np
 import h5py
 
 V_BINS       = 1000
+EOL_FRACTION = 0.8   # capacity retention threshold that defines end-of-life
 
 MAT_FILES = {
     "2017-05-12_batchdata_updated_struct_errorcorrect.mat": "batch1",
     "2017-06-30_batchdata_updated_struct_errorcorrect.mat": "batch2",
     "2018-04-12_batchdata_updated_struct_errorcorrect.mat": "batch3",
 }
+
+
+
+
+def _find_eol_idx(qd: np.ndarray, eol_fraction: float = EOL_FRACTION) -> int:
+    qd = np.asarray(qd, dtype=np.float32)
+
+    n_ref     = 10
+    q_init    = float(np.max(qd[:n_ref]))
+
+    q_eol     = eol_fraction * q_init
+
+
+    for i in range(len(qd)):
+        if i < n_ref:
+            continue
+        if qd[i] < q_eol:
+            return int(i)
+
+    return - 1
 
 def _interp_nan(arr: np.ndarray) -> np.ndarray:
     """Replace NaN values with linear interpolation; edge NaNs use nearest valid value."""
@@ -81,15 +102,32 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                     chargetime = _interp_nan(np.array(sum_grp["chargetime"], dtype=np.float32).reshape(-1))
                 except Exception as e:
                     print(f"\n    cycle_life of {i}: {e}")
-                    continue
                     
-#                     sum_grp    = f[batch["summary"][i, 0]]
-#                     qd         = _interp_nan(np.array(sum_grp["QDischarge"], dtype=np.float32).reshape(-1))
-#                     IR         = _interp_nan(np.array(sum_grp["IR"],         dtype=np.float32).reshape(-1))
-#                     tmax       = _interp_nan(np.array(sum_grp["Tmax"],       dtype=np.float32).reshape(-1))
-#                     tavg       = _interp_nan(np.array(sum_grp["Tavg"],       dtype=np.float32).reshape(-1))
-#                     chargetime = _interp_nan(np.array(sum_grp["chargetime"], dtype=np.float32).reshape(-1))                 
-#                     cycle_life = len(qd) + 1
+                    sum_grp    = f[batch["summary"][i, 0]]
+                    qd         = _interp_nan(np.array(sum_grp["QDischarge"], dtype=np.float32).reshape(-1))
+                    IR         = _interp_nan(np.array(sum_grp["IR"],         dtype=np.float32).reshape(-1))
+                    tmax       = _interp_nan(np.array(sum_grp["Tmax"],       dtype=np.float32).reshape(-1))
+                    tavg       = _interp_nan(np.array(sum_grp["Tavg"],       dtype=np.float32).reshape(-1))
+                    chargetime = _interp_nan(np.array(sum_grp["chargetime"], dtype=np.float32).reshape(-1))                 
+                    cycle_life = len(qd) + 1
+
+                eol_idx = _find_eol_idx(qd)
+    
+                q_init   = float(np.max(qd[: min(10, len(qd))]))
+                if eol_idx > 0:   
+                    retained = float(qd[eol_idx]) / q_init if q_init > 0 else 0.0
+                    eol_pct  = retained * 100
+                    print(f"    EOL at idx {int(eol_idx)} -> cycle {int(cycle_life)}  "
+                                  f"(Qd at {eol_pct:.1f}% of initial)")
+                else:
+                    retained = float(qd[-1] / q_init) if q_init > 0 else 0.0
+                    eol_pct  = retained * 100
+                    print(f"    EOL at idx {int(eol_idx)} -> cycle {int(cycle_life)}  "
+                                  f"(Qd at {eol_pct:.1f}% of initial)")
+                    if retained > EOL_FRACTION + 0.05:
+                        print(f" This cell is not finished its life-cycle ...")   
+                        continue
+                    
                 
                 
                 '''
@@ -115,7 +153,7 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                 ct_ds    = cyc_grp["t"]
                 
                 
-                n_cyc    = qdlin_ds.shape[0]
+                n_cyc    = cycle_life
 
                 qdlin_list       = []
                 dqdv_list        = []

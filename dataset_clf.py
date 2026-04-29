@@ -96,7 +96,7 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
     for i, cid in enumerate(cell_ids):
         if cid not in cells:
             continue
-        cell_rng = np.random.default_rng(seed + i + 2) 
+        cell_rng = np.random.default_rng(seed + i + 3) 
         
         cell       = cells[cid]
         cycle_life = int(cell["cycle_life"])
@@ -158,7 +158,7 @@ class _CellCache:
 
         dq_arr      = np.empty((n_cyc, V_BINS), dtype=np.float32)
         dqdv_arr    = np.empty((n_cyc, V_BINS), dtype=np.float32)
-        summary_arr = np.empty((n_cyc, 18),     dtype=np.float32)
+        summary_arr = np.empty((n_cyc, 14),     dtype=np.float32)
 
         for c in range(n_cyc):
             q              = np.array(qdlin_list[c], dtype=np.float32).reshape(-1)
@@ -193,17 +193,19 @@ def _get_summary_row(summary, c, d_pos=5):
     ], dtype=np.float32)
 
     scalar_feats = np.array([
-        safe(summary["QDischarge"]), safe(summary["IR"]),
-        safe(summary["Tmax"]),       safe(summary["Tavg"]),
+        safe(summary["QDischarge"]), 
+        #safe(summary["IR"]),
+        #safe(summary["Tmax"]),       safe(summary["Tavg"]),
         safe(summary["chargetime"]),
         safe(summary["dqdv_slope_max"]), safe(summary["dqdv_slope_min"]),
         safe(summary["dqdv_min"]),       safe(summary["dqdv_avg"]),
         safe(summary["log_std_dq"]),     safe(summary["log_std_dc"]),
-        safe(summary["log_std_T"]),      safe(summary["log_std_I"]),
+        #safe(summary["log_std_T"]),     
+        safe(summary["log_std_I"]),
         safe(summary["log_std_ct"]),
     ], dtype=np.float32)
-
-    return np.concatenate([scalar_feats, pe])   # (18,)
+    
+    return np.concatenate([scalar_feats, pe])   # (14,)
 
 
 def _build_sample_tensors(cell: dict, start: int,
@@ -346,8 +348,8 @@ class MITBatteryClsDataset(Dataset):
 def build_clf_dataloaders(
     content_dir: str,
     batch_size:  int   = 32,
-    n_samples:   int   = 500,
-    val_ratio:   float = 0.2,
+    n_samples:   int   = 600,
+    val_ratio:   float = 0.1,
     num_workers: int   = 0,
     seed:        int   = 42,
 ) -> Tuple[DataLoader, DataLoader, DataLoader, Tuple]:
@@ -374,16 +376,21 @@ def build_clf_dataloaders(
         rng     = np.random.default_rng(seed)
         rng.shuffle(all_ids)
         n_val   = max(1, int(len(all_ids) * val_ratio))
+        
+        
+        trn_ids = all_ids[2*n_val:]
         val_ids = all_ids[:n_val]
-        trn_ids = all_ids[n_val:]
-        tst_ids = val_ids
+        tst_ids = all_ids[n_val:2*n_val]
         
         per_line = 4
         lines = [val_ids[i:i+per_line] for i in range(0, len(val_ids), per_line)]
         inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
-        print(f"TestCellName = [{inner}]")
+        print(f"ValidationCellName = [{inner}]")
 
-        print(f"Split — Train: {len(trn_ids)}  Val/Test: {len(val_ids)}")
+        print(f"Split — Train: {len(trn_ids)}  Val: {len(val_ids)} Test: {len(tst_ids)}")
+        
+        print(f'trn_ids:{trn_ids}')
+        print(f'test_ids:{tst_ids}')
 
     print("Building train dataset...")
     train_ds = MITBatteryClsDataset(trainval, trn_ids, n_samples,
@@ -395,7 +402,8 @@ def build_clf_dataloaders(
                                      scalers=scalers, seed=seed + 1)
 
     print("Building test dataset...")
-    test_ds  = val_ds
+    test_ds  = MITBatteryClsDataset(trainval, val_ids, n_samples,
+                                     scalers=scalers, seed=seed + 2)
 
     kw = dict(batch_size=batch_size, num_workers=num_workers, pin_memory=True)
     return (

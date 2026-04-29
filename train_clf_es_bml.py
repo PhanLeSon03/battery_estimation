@@ -1,6 +1,6 @@
 """
-train_clf_es.py — Train CNN+GRU classifier for battery RUL using CMA-ES
-                  (no backprop, no optimizer)
+train_clf_es_bml.py — Train CNN+GRU classifier for battery RUL using CMA-ES
+                       on BatteryML dataset (no backprop, no optimizer)
 
 Classes:
     0: RUL > 400
@@ -14,7 +14,8 @@ ES strategy: CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
     - requires: pip install cma
 
 Usage:
-    python train_clf_es.py --content_dir ./content --output_dir ./checkpoints_es  --pretrain_ckpt checkpoints_clf/best_clf.pt
+    python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml
+    python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml --pretrain_ckpt checkpoints_clf_bml/best_clf_bml.pt
 """
 
 import os
@@ -24,12 +25,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import classification_report, confusion_matrix
-import cma   
-    
+import cma   # pip install cma
 
-from dataset_clf import build_clf_dataloaders, N_CLASSES, N_INPUT
+from dataset_clf_bml import build_clf_dataloaders, N_CLASSES, N_INPUT, V_BINS  # BML dataset
 from train_clf import BatteryRULClassifier, evaluate, OrdinalLoss, predict_cls, ordinal_predict 
-from gen_features import V_BINS
 import joblib
 
 
@@ -44,6 +43,7 @@ def set_seed(seed: int = 42):
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark     = False
+
 
 
 # -------------------------------------------------------------------------
@@ -91,6 +91,29 @@ def fitness(model: nn.Module, loader, device: torch.device) -> float:
 
 
 # -------------------------------------------------------------------------
+# Evaluate — loss + acc + predictions (for final report)
+# -------------------------------------------------------------------------
+@torch.no_grad()
+def evaluate(model: nn.Module, loader, criterion, pred_fn, device: torch.device):
+    model.eval()
+    total_loss = 0.0
+    all_pred   = []
+    all_true   = []
+    for batch in loader:
+        dq      = batch["dq"].to(device)
+        summary = batch["summary"].to(device)
+        labels  = batch["label"].to(device)
+        out     = model(dq, summary)
+        loss    = criterion(out, labels)
+        total_loss += loss.item() * len(labels)
+        all_pred.extend(pred_fn(out).cpu().numpy())
+        all_true.extend(labels.cpu().numpy())
+    all_pred = np.array(all_pred)
+    all_true = np.array(all_true)
+    return total_loss / len(all_true), (all_pred == all_true).mean(), all_pred, all_true
+
+
+# -------------------------------------------------------------------------
 # CMA-ES training loop
 # -------------------------------------------------------------------------
 def cmaes_train(
@@ -130,8 +153,7 @@ def cmaes_train(
     # evaluate initial params
     best_acc  = fitness(model, val_loader,   device)
     train_acc = fitness(model, train_loader, device)
-    test_acc = fitness(model, test_loader, device)
-    print(f"Initial val acc: {best_acc:.4f}  | train acc: {train_acc:.4f}  | test acc: {test_acc:.4f}"
+    print(f"Initial val acc: {best_acc:.4f}  | train acc: {train_acc:.4f}"
           f"  |  n_params: {n_params:,}  sigma0: {sigma:.4f}")
 
     # CMA options — suppress internal output, we print ourselves
@@ -188,11 +210,12 @@ def cmaes_train(
         # train acc of best offspring this generation (for monitoring overfitting)
         set_flat_params(model, solutions[best_idx].astype(np.float32))
         train_acc = fitness(model, train_loader, device)
+        test_acc = fitness(model, test_loader, device)
 
         # restore best params into model
         set_flat_params(model, best_params.astype(np.float32))
 
-        print(f"{gen:5d} | {best_acc:8.4f} | {train_acc:8.4f} | "
+        print(f"{gen:5d} | {best_acc:8.4f} | {train_acc:8.4f} | {test_acc:8.4f} | "
               f"{es.sigma:10.6f} | {'yes' if improved else 'no':>9}")
 
         # stop when val and train acc are close — model has converged without overfitting
@@ -223,14 +246,14 @@ def train(args):
         content_dir = args.content_dir,
         batch_size  = args.batch_size,
         n_samples   = args.n_samples,
-        val_ratio   = 0.1,
+        val_ratio   = 0.2,
         num_workers = args.num_workers,
         seed        = args.seed,
     )
 
     dq_scaler, summary_scaler = scalers
-    joblib.dump(dq_scaler,      os.path.join(args.output_dir, "dq_scaler.pkl"))
-    joblib.dump(summary_scaler, os.path.join(args.output_dir, "summary_scaler.pkl"))
+    joblib.dump(dq_scaler,      os.path.join(args.output_dir, "dq_scaler_bml.pkl"))
+    joblib.dump(summary_scaler, os.path.join(args.output_dir, "summary_scaler_bml.pkl"))
 
     summary_feats = summary_scaler.n_features_in_
     print(f"summary_feats: {summary_feats}")
@@ -265,8 +288,8 @@ def train(args):
     for m in model.modules():
         _handles.append(m.register_forward_hook(_hook))
 
-    _dummy_dq      = torch.zeros(1, N_INPUT, 1, V_BINS,         device=device)
-    _dummy_summary = torch.zeros(1, N_INPUT, summary_feats, device=device)
+    _dummy_dq      = torch.zeros(1, N_INPUT, 1, V_BINS,      device=device)  # BML: V_BINS from dataset_clf_bml
+    _dummy_summary = torch.zeros(1, N_INPUT, summary_feats,  device=device)
     with torch.no_grad():
         model(_dummy_dq, _dummy_summary)
 
@@ -353,8 +376,8 @@ def train(args):
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--content_dir", default="./content")
-    parser.add_argument("--output_dir",  default="./checkpoints_es")
+    parser.add_argument("--content_dir", default="./content_bml")
+    parser.add_argument("--output_dir",  default="./checkpoints_es_bml")
     parser.add_argument("--batch_size",  type=int,   default=256)   # larger batch = stable fitness signal
     parser.add_argument("--n_samples",   type=int,   default=600)
     parser.add_argument("--seed",        type=int,   default=42)
@@ -363,7 +386,7 @@ if __name__ == "__main__":
     parser.add_argument("--gru_layers",  type=int,   default=2)
     parser.add_argument("--num_workers", type=int,   default=0)
     parser.add_argument("--pretrain_ckpt", default=None,
-                        help="path to best_clf.pt from train_clf.py")
+                        help="path to best_clf.pt from train_clf_bml.py")
     parser.add_argument("--loss", default="ordinal",
                         choices=["cross_entropy", "ordinal"],
                         help="Loss function for final test evaluation only")
