@@ -190,18 +190,13 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
         if n_cyc < N_INPUT:
             continue
 
-        def observed_cycle(c: int) -> int:
-            if cycle_index.size and c < cycle_index.size:
-                return int(cycle_index[c])
-            return c + 1
-
         max_start    = n_cyc - N_RANDOM
         class_starts = {c: [] for c in range(N_CLASSES)}
 
         for start in range(N_EARLY, max_start + 1):
             if start + N_RANDOM > n_cyc - 4:   # 4-cycle safety margin
                 continue
-            end_cycle = observed_cycle(start + N_RANDOM - 1)
+            end_cycle = int(cycle_index[start + N_RANDOM - 1]) 
             rul       = max(0, cycle_life - end_cycle)
             label     = rul_to_class(rul)
             class_starts[label].append(start)
@@ -214,7 +209,7 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
                                    size=min(n_per_class, len(starts_list)),
                                    replace=False)
             for s in pick:
-                end_cycle = observed_cycle(int(s) + N_RANDOM - 1)
+                end_cycle = int(cycle_index[int(s) + N_RANDOM - 1])
                 index.append((cid, int(s), label,
                                max(0, cycle_life - end_cycle)))
 
@@ -381,7 +376,7 @@ class BMLBatteryClsDataset(Dataset):
             self.summary_scaler = None
 
     # ── Fit scalers by sampling a subset ─────────────────────────────────
-    def _fit_scalers(self, seed: int, max_fit: int = 2000):
+    def _fit_scalers(self, seed: int, max_fit: int = 10000):
         print("  Fitting scalers on subset...")
         rng    = np.random.default_rng(seed)
         subset = rng.choice(len(self.index),
@@ -456,8 +451,8 @@ def build_clf_dataloaders(
     inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
     print(f"TestCellName = [{inner}]")
 
-    print(f"Split — Train: {len(trn_ids)}  Val/Test: {len(val_ids)}")
-    print(trn_ids)
+    print(f"Split — Train: {len(trn_ids)}  Val: {len(val_ids)}   Test: {len(test_ids)}")
+
 
     print("Building train dataset...")
     train_ds = BMLBatteryClsDataset(cells, trn_ids, n_samples,
@@ -468,6 +463,7 @@ def build_clf_dataloaders(
     val_ds   = BMLBatteryClsDataset(cells, val_ids, n_samples,
                                     scalers=scalers, seed=seed + 1)
 
+    print("Building test dataset...")
     test_ds = BMLBatteryClsDataset(cells, test_ids, n_samples,
                                     scalers=scalers, seed=seed + 2)
 

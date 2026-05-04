@@ -15,7 +15,7 @@ ES strategy: CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
 
 Usage:
     python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml
-    python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml --pretrain_ckpt checkpoints_clf_bml/best_clf_bml.pt
+    python train_clf_es_bml.py --content_dir ./content_bml/MATR --output_dir ./checkpoints_clf_bml_MATR_es --pretrain_ckpt checkpoints_clf_bml_MATR/best_clf_bml.pt
 """
 
 import os
@@ -246,7 +246,7 @@ def train(args):
         content_dir = args.content_dir,
         batch_size  = args.batch_size,
         n_samples   = args.n_samples,
-        val_ratio   = 0.2,
+        val_ratio   = 0.1,
         num_workers = args.num_workers,
         seed        = args.seed,
     )
@@ -391,7 +391,7 @@ if __name__ == "__main__":
                         choices=["cross_entropy", "ordinal"],
                         help="Loss function for final test evaluation only")
     # ── CMA-ES hyperparameters ───────────────────────────────────────────
-    parser.add_argument("--n_gen",   type=int,   default=200,  help="max generations")
+    parser.add_argument("--n_gen",   type=int,   default=20,  help="max generations")
     parser.add_argument("--sigma",   type=float, default=0.02, help="initial step size (sigma0)")
     parser.add_argument("--popsize", type=int,   default=None,
                         help="CMA population size; None = auto (4 + 3*ln(n_params))")
