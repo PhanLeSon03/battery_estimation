@@ -23,6 +23,7 @@ How to run:
 """
 
 import argparse
+import json
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -122,14 +123,16 @@ def _load_npz_cell(path: str) -> dict:
             "cycle_life":  cycle_life,
             "cycle_index": cycle_index[:n_keep],
             "summary": {
-                "QDischarge": qd[:n_keep],
-                "chargetime": _arr(d, "chargetime")[:n_keep],
-                "dqdv_max":   _arr(d, "dqdv_max")[:n_keep],
-                "dqdv_min":   _arr(d, "dqdv_min")[:n_keep],
-                "dqdv_avg":   _arr(d, "dqdv_avg")[:n_keep],
-                "log_std_dq": _arr(d, "log_std_dq")[:n_keep],
-                "log_std_I":  _arr(d, "log_std_I")[:n_keep],
-                "log_std_ct": _arr(d, "log_std_ct")[:n_keep],
+                "QDischarge":    qd[:n_keep],
+                "chargetime":    _arr(d, "chargetime")[:n_keep],
+                "dqdv_slope_max": _arr(d, "dqdv_slope_max")[:n_keep],
+                "dqdv_slope_min": _arr(d, "dqdv_slope_min")[:n_keep],
+                "dqdv_min":      _arr(d, "dqdv_min")[:n_keep],
+                "dqdv_avg":      _arr(d, "dqdv_avg")[:n_keep],
+                "log_std_dq":    _arr(d, "log_std_dq")[:n_keep],
+                "log_std_dc":    _arr(d, "log_std_dc")[:n_keep],
+                "log_std_I":     _arr(d, "log_std_I")[:n_keep],
+                "log_std_ct":    _arr(d, "log_std_ct")[:n_keep],
             },
             "qdlin": [x for x in qdlin_raw[:n_keep]],
             "dqdv":  [x for x in dqdv_raw[:n_keep]] if dqdv_raw.ndim > 1 else [],
@@ -151,6 +154,7 @@ def load_all_npz(content_dir: str) -> dict:
         cell_id = "__".join(rel.with_suffix("").parts)
         try:
             cells[cell_id] = _load_npz_cell(str(path))
+            cells[cell_id]["_path"] = str(path)
         except Exception as exc:
             print(f"  WARNING: could not load {path}: {exc}")
 
@@ -159,197 +163,272 @@ def load_all_npz(content_dir: str) -> dict:
 
 
 # -------------------------------------------------------------------------
-# One sample = (early_8 + random_24, label)
-# Multiple samples per cell drawn at different window starts
+# Sample index — lightweight tuples, no data loaded
 # -------------------------------------------------------------------------
-def extract_clf_samples(cell: dict, n_samples: int = 10, seed: int = None) -> list:
+def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
+                       n_samples: int = 500) -> list:
     """
-    Extract multiple classification samples from one cell.
-    Each sample uses first 8 cycles + a random consecutive 24-cycle window.
-    Window is drawn from cycles 8 onwards.
-
-    Returns list of dicts with keys: dq, summary, label, rul.
+    Returns a list of lightweight index tuples:
+        (cell_id, window_start, label, rul)
+    No actual signal data is loaded here.
     """
-    rng = np.random.default_rng(seed)
+    index = []
 
-    cycle_life  = int(cell["cycle_life"])
-    cycle_index = np.asarray(cell.get("cycle_index", []), dtype=np.int32).reshape(-1)
-    summary     = cell["summary"]
-    qdlin_list  = cell["qdlin"]
+    for i, cid in enumerate(cell_ids):
+        if cid not in cells:
+            continue
+        cell_rng = np.random.default_rng(seed + i + 3)   # independent per cell
 
-    qd         = np.asarray(summary["QDischarge"], dtype=np.float32).reshape(-1)
-    ct         = np.asarray(summary["chargetime"],  dtype=np.float32).reshape(-1)
-    dqdv_max   = np.asarray(summary["dqdv_max"],    dtype=np.float32).reshape(-1)
-    dqdv_min   = np.asarray(summary["dqdv_min"],    dtype=np.float32).reshape(-1)
-    dqdv_avg   = np.asarray(summary["dqdv_avg"],    dtype=np.float32).reshape(-1)
-    log_std_dq = np.asarray(summary["log_std_dq"],  dtype=np.float32).reshape(-1)
-    log_std_I  = np.asarray(summary["log_std_I"],   dtype=np.float32).reshape(-1)
-    log_std_ct = np.asarray(summary["log_std_ct"],  dtype=np.float32).reshape(-1)
+        cell        = cells[cid]
+        cycle_life  = int(cell["cycle_life"])
+        cycle_index = np.asarray(cell.get("cycle_index", []), dtype=np.int32).reshape(-1)
+        n_cyc       = min(
+            len(cell["summary"]["QDischarge"]),
+            len(cell["qdlin"]),
+        )
+        if cycle_index.size:
+            n_cyc = min(n_cyc, cycle_index.size)
 
-    n_cyc = min(
-        len(qd), len(ct), len(dqdv_max), len(dqdv_min), len(dqdv_avg),
-        len(log_std_dq), len(log_std_I), len(log_std_ct), len(qdlin_list),
+        if n_cyc < N_INPUT:
+            continue
+
+        def observed_cycle(c: int) -> int:
+            if cycle_index.size and c < cycle_index.size:
+                return int(cycle_index[c])
+            return c + 1
+
+        max_start    = n_cyc - N_RANDOM
+        class_starts = {c: [] for c in range(N_CLASSES)}
+
+        for start in range(N_EARLY, max_start + 1):
+            if start + N_RANDOM > n_cyc - 4:   # 4-cycle safety margin
+                continue
+            end_cycle = observed_cycle(start + N_RANDOM - 1)
+            rul       = max(0, cycle_life - end_cycle)
+            label     = rul_to_class(rul)
+            class_starts[label].append(start)
+
+        n_per_class = max(1, n_samples // N_CLASSES)
+        for label, starts_list in class_starts.items():
+            if not starts_list:
+                continue
+            pick = cell_rng.choice(starts_list,
+                                   size=min(n_per_class, len(starts_list)),
+                                   replace=False)
+            for s in pick:
+                end_cycle = observed_cycle(int(s) + N_RANDOM - 1)
+                index.append((cid, int(s), label,
+                               max(0, cycle_life - end_cycle)))
+
+    return index
+
+
+# -------------------------------------------------------------------------
+# Per-cell cache — built once on first access, sliced per __getitem__
+# -------------------------------------------------------------------------
+_N_SUMMARY_BML = 14   # 10 scalars + 4 PE values
+
+
+class _CellCache:
+    """
+    Pre-builds all cycle arrays for a cell on first access.
+    Subsequent __getitem__ calls only slice — no numpy reconstruction.
+        dq_all      : (n_cyc, 1, V_BINS)  — qdlin-ref
+        summary_all : (n_cyc, 14)          — scalar feats + PE
+    """
+    __slots__ = ("dq_all", "summary_all", "_built")
+
+    def __init__(self):
+        self.dq_all      = None
+        self.summary_all = None
+        self._built      = False
+
+    def build(self, cell: dict) -> None:
+        if self._built:
+            return
+        qdlin_list  = cell["qdlin"]
+        summary     = cell["summary"]
+        cycle_index = np.asarray(cell.get("cycle_index", []), dtype=np.int32).reshape(-1)
+        n_cyc       = len(qdlin_list)
+        ref_idx     = min(REF_CYCLE, n_cyc - 1)
+        ref_qdlin   = np.asarray(qdlin_list[ref_idx], dtype=np.float32).reshape(-1)
+
+        dq_arr      = np.empty((n_cyc, V_BINS),        dtype=np.float32)
+        summary_arr = np.empty((n_cyc, _N_SUMMARY_BML), dtype=np.float32)
+
+        for c in range(n_cyc):
+            q          = np.asarray(qdlin_list[c], dtype=np.float32).reshape(-1)
+            length     = min(len(q), len(ref_qdlin), V_BINS)
+            dq_arr[c]  = 0.0
+            dq_arr[c, :length] = q[:length] - ref_qdlin[:length]
+            summary_arr[c] = _get_summary_row(summary, c, cycle_index)
+
+        self.dq_all      = np.expand_dims(dq_arr, axis=1)   # (n_cyc, 1, V_BINS)
+        self.summary_all = summary_arr                       # (n_cyc, 14)
+        self._built      = True
+
+
+# -------------------------------------------------------------------------
+# Feature helpers
+# -------------------------------------------------------------------------
+_SUMMARY_KEYS_BML = (
+    "QDischarge", "chargetime",
+    "dqdv_slope_max", "dqdv_slope_min", "dqdv_min", "dqdv_avg",
+    "log_std_dq", "log_std_dc", "log_std_I", "log_std_ct",
+)   # 10 scalars
+
+
+def _get_summary_row(summary: dict, c: int,
+                     cycle_index: np.ndarray = None, d_pos: int = 5) -> np.ndarray:
+    # use real cycle number for PE if available
+    if cycle_index is not None and cycle_index.size and c < cycle_index.size:
+        cycle_num = max(1, int(cycle_index[c]))
+    else:
+        cycle_num = c + 1
+
+    def safe(arr: np.ndarray) -> float:
+        return float(arr[c]) if c < len(arr) and np.isfinite(arr[c]) else 0.0
+
+    pe = np.asarray([
+        np.sin(cycle_num / 3000 ** (2 * i / d_pos)) if i % 2 == 0 else
+        np.cos(cycle_num / 3000 ** ((2 * i - 1) / d_pos))
+        for i in range(1, d_pos)
+    ], dtype=np.float32)
+
+    scalar_feats = np.asarray(
+        [safe(np.asarray(summary[k], dtype=np.float32)) for k in _SUMMARY_KEYS_BML],
+        dtype=np.float32,
     )
-    if cycle_index.size:
-        n_cyc = min(n_cyc, cycle_index.size)
+    return np.concatenate([scalar_feats, pe])   # (14,)
 
-    # need at least early + random window
-    if n_cyc < N_INPUT:
-        return []
 
-    ref_idx   = min(REF_CYCLE, n_cyc - 1)
-    ref_qdlin = np.asarray(qdlin_list[ref_idx], dtype=np.float32).reshape(-1)
+def _build_sample_tensors(cell: dict, start: int,
+                           dq_scaler, summary_scaler,
+                           cache: Optional[_CellCache] = None) -> Tuple:
+    """Featurise one sample — fast path uses cache, slow path builds on-the-fly."""
+    window_cycles = list(range(start, start + N_RANDOM))
+    all_cycles    = list(range(N_EARLY)) + window_cycles   # 32 total
 
-    def observed_cycle(c: int) -> int:
-        if cycle_index.size and c < cycle_index.size:
-            return int(cycle_index[c])
-        return c + 1
+    if cache is not None and cache._built:
+        # fast path: just slice pre-built arrays
+        dq_seq      = cache.dq_all[all_cycles]       # (32, 1, V_BINS)
+        summary_seq = cache.summary_all[all_cycles]  # (32, 14)
+    else:
+        # slow path: build on-the-fly (used during scaler fitting)
+        qdlin_list  = cell["qdlin"]
+        summary     = cell["summary"]
+        cycle_index = np.asarray(cell.get("cycle_index", []), dtype=np.int32).reshape(-1)
+        ref_idx     = min(REF_CYCLE, len(qdlin_list) - 1)
+        ref_qdlin   = np.asarray(qdlin_list[ref_idx], dtype=np.float32).reshape(-1)
 
-    def get_dq(c: int) -> np.ndarray:
-        q      = np.asarray(qdlin_list[c], dtype=np.float32).reshape(-1)
-        length = min(len(q), len(ref_qdlin), V_BINS)
-        out    = np.zeros(V_BINS, dtype=np.float32)
-        out[:length] = q[:length] - ref_qdlin[:length]
-        return out
+        dq_rows = []
+        for c in all_cycles:
+            q      = np.asarray(qdlin_list[c], dtype=np.float32).reshape(-1)
+            length = min(len(q), len(ref_qdlin), V_BINS)
+            row    = np.zeros(V_BINS, dtype=np.float32)
+            row[:length] = q[:length] - ref_qdlin[:length]
+            dq_rows.append(row)
 
-    def get_summary_row(c: int, d_pos: int = 5) -> np.ndarray:
-        pos = c
+        dq_seq      = np.expand_dims(np.stack(dq_rows), axis=1)   # (32, 1, V_BINS)
+        summary_seq = np.stack([_get_summary_row(summary, c, cycle_index)
+                                 for c in all_cycles])              # (32, 14)
 
-        def safe(arr: np.ndarray) -> float:
-            return float(arr[pos]) if pos < len(arr) and np.isfinite(arr[pos]) else 0.0
+    if dq_scaler is not None:
+        T, C, F = dq_seq.shape
+        dq_seq      = dq_scaler.transform(dq_seq.reshape(T, C * F)).reshape(T, C, F)
+        summary_seq = summary_scaler.transform(summary_seq)
 
-        cycle_num = max(1, observed_cycle(c))
-        pe = np.asarray(
-            [
-                np.sin(cycle_num / 3000 ** (2 * i / d_pos))
-                if i % 2 == 0
-                else np.cos(cycle_num / 3000 ** ((2 * i - 1) / d_pos))
-                for i in range(1, d_pos)
-            ],
-            dtype=np.float32,
-        )
-        scalar_feats = np.asarray(
-            [
-                safe(qd), safe(ct), safe(dqdv_max), safe(dqdv_min), safe(dqdv_avg),
-                safe(log_std_dq), safe(log_std_I), safe(log_std_ct),
-            ],
-            dtype=np.float32,
-        )
-        return np.concatenate([scalar_feats, pe])   # (12,)
-
-    # ── Group all valid window starts by class ────────────────────────────
-    max_start    = n_cyc - N_RANDOM
-    class_starts = {i: [] for i in range(N_CLASSES)}
-    for start in range(N_EARLY, max_start + 1):
-        if start + N_RANDOM > n_cyc - 4:   # 4-cycle safety margin, same as MIT
-            continue
-        end_cycle = observed_cycle(start + N_RANDOM - 1)
-        rul       = max(0, cycle_life - end_cycle)
-        label     = rul_to_class(rul)
-        class_starts[label].append(start)
-
-    # ── Sample equally from each class ────────────────────────────────────
-    n_per_class = max(1, n_samples // N_CLASSES)
-    chosen: list = []
-    for label, starts_for_class in class_starts.items():
-        if not starts_for_class:
-            continue
-        pick = rng.choice(
-            starts_for_class,
-            size=min(n_per_class, len(starts_for_class)),
-            replace=False,
-        )
-        chosen.extend([(int(s), label) for s in pick])
-
-    # ── Build sample dicts ────────────────────────────────────────────────
-    samples = []
-    for start, label in chosen:
-        window_cycles = list(range(start, start + N_RANDOM))
-        all_cycles    = list(range(N_EARLY)) + window_cycles   # 32 total
-        end_cycle     = observed_cycle(start + N_RANDOM - 1)
-
-        samples.append({
-            "dq":      np.stack([get_dq(c)          for c in all_cycles]),  # (32, 1000)
-            "summary": np.stack([get_summary_row(c) for c in all_cycles]),  # (32, 12)
-            "label":   label,
-            "rul":     max(0, cycle_life - end_cycle),
-        })
-
-    return samples
+    return (
+        torch.tensor(dq_seq,      dtype=torch.float32),   # (32, 1, V_BINS)
+        torch.tensor(summary_seq, dtype=torch.float32),   # (32, 14)
+    )
 
 
 # -------------------------------------------------------------------------
-# Dataset
+# Dataset — index in RAM, data loaded per __getitem__ call
 # -------------------------------------------------------------------------
 class BMLBatteryClsDataset(Dataset):
     def __init__(
         self,
-        cells:     dict,
-        cell_ids:  list,
-        n_samples: int             = 500,
-        scalers:   Optional[Tuple] = None,
-        seed:      int             = 42,
+        cells:      dict,
+        cell_ids:   list,
+        n_samples:  int             = 500,
+        scalers:    Optional[Tuple] = None,
+        seed:       int             = 42,
+        fit_scaler: bool            = False,
     ):
-        raw     = []
-        skipped = 0
+        self.cells = cells
+        self.index = build_sample_index(cells, cell_ids,
+                                        seed=seed, n_samples=n_samples)
 
-        for i, cid in enumerate(cell_ids):
-            if cid not in cells:
-                continue
-            samples = extract_clf_samples(cells[cid], n_samples=n_samples,
-                                          seed=seed + i)
-            if samples:
-                raw.extend(samples)
-            else:
-                skipped += 1
+        # one cache per cell, built lazily on first __getitem__ access
+        self._cache: dict[str, _CellCache] = {
+            cid: _CellCache() for cid in cell_ids if cid in cells
+        }
 
-        print(f"  Cells valid: {len(cell_ids) - skipped}  "
-              f"Skipped: {skipped}  "
-              f"Total samples: {len(raw)}")
+        print(f"  Total index entries: {len(self.index)}")
+        labels = [e[2] for e in self.index]
+        for c in range(N_CLASSES):
+            print(f"  Class {c}: {sum(l == c for l in labels)} samples")
 
-        if not raw:
+        if not self.index:
             raise ValueError("No valid samples.")
 
-        dq      = np.stack([r["dq"]      for r in raw])   # (N, 32, 1000)
-        summary = np.stack([r["summary"] for r in raw])   # (N, 32, 12)
-        labels  = np.asarray([r["label"] for r in raw], dtype=np.int64)
-
-        N, T, F = summary.shape
-
-        for c in range(N_CLASSES):
-            print(f"  Class {c}: {(labels == c).sum()} samples")
-
-        if scalers is None:
-            self.dq_scaler      = StandardScaler()
-            self.summary_scaler = StandardScaler()
-            dq      = self.dq_scaler.fit_transform(
-                dq.reshape(N * T, V_BINS)).reshape(N, T, V_BINS)
-            summary = self.summary_scaler.fit_transform(
-                summary.reshape(N * T, F)).reshape(N, T, F)
-        else:
+        if scalers is not None:
             self.dq_scaler, self.summary_scaler = scalers
-            dq      = self.dq_scaler.transform(
-                dq.reshape(N * T, V_BINS)).reshape(N, T, V_BINS)
-            summary = self.summary_scaler.transform(
-                summary.reshape(N * T, F)).reshape(N, T, F)
+        elif fit_scaler:
+            self.dq_scaler, self.summary_scaler = self._fit_scalers(seed)
+        else:
+            self.dq_scaler      = None
+            self.summary_scaler = None
 
-        self.dq       = torch.tensor(dq,      dtype=torch.float32)
-        self.summary  = torch.tensor(summary, dtype=torch.float32)
-        self.labels   = torch.tensor(labels,  dtype=torch.long)
-        self.cell_ids = [r for r in cell_ids if r in cells]
+    # ── Fit scalers by sampling a subset ─────────────────────────────────
+    def _fit_scalers(self, seed: int, max_fit: int = 2000):
+        print("  Fitting scalers on subset...")
+        rng    = np.random.default_rng(seed)
+        subset = rng.choice(len(self.index),
+                            size=min(max_fit, len(self.index)),
+                            replace=False)
+        dq_list, sum_list = [], []
+        for idx in subset:
+            cid, start, _, _ = self.index[idx]
+            dq_seq, sum_seq  = _build_sample_tensors(
+                self.cells[cid], start, None, None)
+            dq_list.append(dq_seq.numpy())
+            sum_list.append(sum_seq.numpy())
 
-    def __len__(self):
-        return len(self.dq)
+        dq_arr  = np.concatenate(dq_list,  axis=0)   # (N*32, 1, V_BINS)
+        sum_arr = np.concatenate(sum_list, axis=0)   # (N*32, 14)
 
-    def __getitem__(self, idx):
-        return {
-            "dq":      self.dq[idx],
-            "summary": self.summary[idx],
-            "label":   self.labels[idx],
-        }
+        N, C, F   = dq_arr.shape
+        dq_arr_2d = dq_arr.reshape(N, C * F)         # (N*32, V_BINS)
+
+        dq_scaler      = StandardScaler().fit(dq_arr_2d)
+        summary_scaler = StandardScaler().fit(sum_arr)
+        print("  Scalers fitted.")
+        return dq_scaler, summary_scaler
 
     def get_scalers(self):
         return self.dq_scaler, self.summary_scaler
+
+    def __len__(self):
+        return len(self.index)
+
+    # ── Load one sample on demand ─────────────────────────────────────────
+    def __getitem__(self, idx):
+        cid, start, label, _ = self.index[idx]
+        cache = self._cache[cid]
+        if not cache._built:                          # lazy build on first access
+            cache.build(self.cells[cid])
+        dq, summary = _build_sample_tensors(
+            self.cells[cid], start,
+            self.dq_scaler, self.summary_scaler,
+            cache=cache)
+        return {
+            "dq":      dq,
+            "summary": summary,
+            "label":   torch.tensor(label, dtype=torch.long),
+        }
 
 
 # -------------------------------------------------------------------------
@@ -358,7 +437,7 @@ class BMLBatteryClsDataset(Dataset):
 def build_clf_dataloaders(
     content_dir: str,
     batch_size:  int   = 32,
-    n_samples:   int   = 500,
+    n_samples:   int   = 600,
     val_ratio:   float = 0.2,
     num_workers: int   = 0,
     seed:        int   = 42,
@@ -371,18 +450,47 @@ def build_clf_dataloaders(
 
     n_val   = max(1, int(len(ids) * val_ratio))
     val_ids = ids[:n_val]
-    trn_ids = ids[n_val:]
-    print(f"Split — Train: {len(trn_ids)}  Val/Test: {len(val_ids)}")
+    test_ids = ids[n_val:2*n_val]
+    trn_ids = ids[2*n_val:]
+
+    print(f"Split — Train: {len(trn_ids)}  Val: {len(val_ids)}  Test: {len(test_ids)}")
+    print("\n[Train cells]")
+    for cid in trn_ids:
+        print(f"  {cid}")
+    print("\n[Val cells]")
+    for cid in val_ids:
+        print(f"  {cid}")
+    print("\n[Test cells]")
+    for cid in test_ids:
+        print(f"  {cid}")
+
+    split_path = Path(content_dir) / "split_cells.json"
+    split_path.parent.mkdir(parents=True, exist_ok=True)
+    paths_map = {cid: cells[cid].get("_path", "") for cid in ids}
+    with open(split_path, "w") as f:
+        json.dump(
+            {
+                "content_dir": str(Path(content_dir).resolve()),
+                "train": list(trn_ids),
+                "val":   list(val_ids),
+                "test":  list(test_ids),
+                "paths": paths_map,
+            },
+            f, indent=2,
+        )
+    print(f"\nSplit written to: {split_path}")
 
     print("Building train dataset...")
-    train_ds = BMLBatteryClsDataset(cells, trn_ids, n_samples, seed=seed)
+    train_ds = BMLBatteryClsDataset(cells, trn_ids, n_samples,
+                                    seed=seed, fit_scaler=True)
     scalers  = train_ds.get_scalers()
 
     print("Building val dataset...")
     val_ds   = BMLBatteryClsDataset(cells, val_ids, n_samples,
                                     scalers=scalers, seed=seed + 1)
 
-    test_ds = val_ds
+    test_ds = BMLBatteryClsDataset(cells, test_ids, n_samples,
+                                    scalers=scalers, seed=seed + 2)
 
     kw = dict(batch_size=batch_size, num_workers=num_workers, pin_memory=True)
     return (
@@ -408,7 +516,7 @@ def main() -> None:
     )
     parser.add_argument("--content_dir",  default="./content_bml")
     parser.add_argument("--batch_size",   type=int,   default=32)
-    parser.add_argument("--n_samples",    type=int,   default=500)
+    parser.add_argument("--n_samples",    type=int,   default=600)
     parser.add_argument("--val_ratio",    type=float, default=0.2)
     parser.add_argument("--num_workers",  type=int,   default=0)
     parser.add_argument("--seed",         type=int,   default=42)

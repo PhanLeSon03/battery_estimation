@@ -89,143 +89,15 @@ Move data to folder ./data
 
 ## Usage
 
-## Step-by-step workflows
-
-### MIT workflow from Raw/Raw_MIT
-
-Use this path when training on the MIT `.mat` files.
-
-1. Put the three raw MIT `.mat` files in `Raw/Raw_MIT/`:
+### 1 — Extract features from raw .mat files
 ```bash
-Raw/Raw_MIT/2017-05-12_batchdata_updated_struct_errorcorrect.mat
-Raw/Raw_MIT/2017-06-30_batchdata_updated_struct_errorcorrect.mat
-Raw/Raw_MIT/2018-04-12_batchdata_updated_struct_errorcorrect.mat
-```
-
-2. Generate MIT feature files:
-```bash
-python gen_features.py --data_dir Raw/Raw_MIT --out_dir content
-```
-
-This creates one `.npz` file per MIT cell:
-```bash
-content/batch1c000.npz
-content/batch1c001.npz
-...
-```
-
-3. Build and check the MIT classification dataset:
-```bash
-python dataset_clf.py --content_dir content
-```
-
-This prints the train/validation/test sample counts and tensor shapes. The training script uses the same dataset builder internally.
-
-4. Train the MIT classifier:
-```bash
-python train_clf.py --content_dir content --output_dir checkpoints_clf
-```
-
-Main outputs:
-```bash
-checkpoints_clf/best_clf.pt
-checkpoints_clf/dq_scaler.pkl
-checkpoints_clf/summary_scaler.pkl
-checkpoints_clf/clf_pred.npy
-checkpoints_clf/clf_true.npy
-```
-
-### BML workflow from Raw/Raw_BML
-
-Use this path when training on BatteryML `.pkl` files. BML files do not consistently contain temperature or internal resistance, so the BML pipeline skips those features.
-
-1. Keep the BML raw folder structure:
-```bash
-Raw/Raw_BML/CALB/*.pkl
-Raw/Raw_BML/XJTU/*.pkl
-Raw/Raw_BML/Tongji/*.pkl
-...
-Raw/Raw_BML/Life labels/*.json
-```
-
-2. Generate BML feature files:
-```bash
-python gen_features_bml.py --data_dir Raw/Raw_BML --out_dir content_bml
-```
-
-The output mirrors the raw subfolders:
-```bash
-Raw/Raw_BML/CALB/CALB_0_B182.pkl
--> content_bml/CALB/CALB_0_B182.npz
-
-Raw/Raw_BML/XJTU/XJTU_3C_battery-11.pkl
--> content_bml/XJTU/XJTU_3C_battery-11.npz
-```
-
-For a quick smoke test, convert only a few files:
-```bash
-python gen_features_bml.py --data_dir Raw/Raw_BML --out_dir content_bml_smoke --max_files 5
-```
-
-3. Build and check the BML classification dataset:
-```bash
-python dataset_clf_bml.py --content_dir content_bml
-```
-
-To check one BML subfolder only:
-```bash
-python dataset_clf_bml.py --content_dir content_bml/CALB
-```
-
-This prints the train/validation/test sample counts and tensor shapes. The training script uses the same dataset builder internally.
-
-4. Train on all generated BML folders:
-```bash
-python train_clf_bml.py --content_dir content_bml --output_dir checkpoints_clf_bml
-```
-
-5. Train on only one BML subfolder:
-```bash
-python train_clf_bml.py --content_dir content_bml/CALB --output_dir checkpoints_clf_bml_CALB
-```
-
-Main outputs:
-```bash
-checkpoints_clf_bml/best_clf_bml.pt
-checkpoints_clf_bml/dq_scaler_bml.pkl
-checkpoints_clf_bml/summary_scaler_bml.pkl
-checkpoints_clf_bml/clf_pred_bml.npy
-checkpoints_clf_bml/clf_true_bml.npy
-```
-
-### Script reference
-
-| Script | What it does | Typical command |
-|--------|--------------|-----------------|
-| `download.py` | Downloads the MIT battery dataset with `kagglehub`. Move the downloaded `.mat` files into `Raw/Raw_MIT` after download. | `python download.py` |
-| `gen_features.py` | Converts MIT `.mat` files into per-cell `.npz` feature files. Includes MIT features such as discharge capacity, IR, temperature, charge time, dQ/dV, and curve statistics. | `python gen_features.py --data_dir Raw/Raw_MIT --out_dir content` |
-| `dataset_clf.py` | Builds and checks MIT train/validation/test dataloaders from generated `.npz` files. It samples 32-cycle windows, assigns RUL classes, scales features, and prints tensor shapes. | `python dataset_clf.py --content_dir content` |
-| `train_clf.py` | Trains the CNN+GRU RUL classifier on MIT-generated `.npz` files. | `python train_clf.py --content_dir content --output_dir checkpoints_clf` |
-| `gen_features_bml.py` | Converts BatteryML `.pkl` files into per-cell `.npz` feature files. It skips temperature and internal resistance. Charge time uses positive-current samples; discharge features use negative-current samples. | `python gen_features_bml.py --data_dir Raw/Raw_BML --out_dir content_bml` |
-| `dataset_clf_bml.py` | Builds and checks BML train/validation/test dataloaders from generated `.npz` files. It reads recursively, so `content_bml` or one subfolder such as `content_bml/CALB` both work. | `python dataset_clf_bml.py --content_dir content_bml/CALB` |
-| `train_clf_bml.py` | Trains the CNN+GRU RUL classifier on BML-generated `.npz` files. | `python train_clf_bml.py --content_dir content_bml --output_dir checkpoints_clf_bml` |
-
-### Example MIT run output
-
-#### 1 - Extract features from raw .mat files
-```bash
-python gen_features.py --data_dir Raw/Raw_MIT --out_dir content
+python gen_features.py --data_dir ./data --out_dir ./content
 ```
 Saves one `.npz` per cell under `./content/`. Only needs to run once.
 
-#### 2 - Build and check dataset
+### 2 — Train
 ```bash
-python dataset_clf.py --content_dir content
-```
-
-#### 3 - Train
-```bash
-python train_clf.py --content_dir content --output_dir checkpoints_clf
+python train_clf.py --content_dir ./content --output_dir ./checkpoints_clf
 ```
 
 ```
@@ -308,6 +180,78 @@ Open `predict_clf.ipynb` and run all cells. Produces:
 
 ---
 
+## BML Pipeline (BatteryML dataset)
+
+A parallel pipeline trains/evaluates on the BatteryML (BML) dataset. Step-by-step:
+
+### Step 1 — Generate features from raw BML `.pkl` files
+```bash
+python gen_features_bml.py --data_dir ./Raw_BML --out_dir ./content_bml
+```
+Outputs one `.npz` per cell under `./content_bml/<family>/<cell>.npz`. Run once.
+
+Optional smoke test:
+```bash
+python gen_features_bml.py --data_dir ./Raw_BML --out_dir ./content_bml --max_files 5
+```
+
+### Step 2 — Build datasets / dataloaders (sanity check)
+`dataset_clf_bml.py` is normally imported by the trainers, but you can also run it standalone to verify feature loading, sample indexing, and the train/val/test split (80/10/10 by default):
+```bash
+python dataset_clf_bml.py --content_dir ./content_bml
+# Or restrict to one BML family:
+python dataset_clf_bml.py --content_dir ./content_bml/CALB --val_ratio 0.1
+```
+This prints the cells assigned to each split and writes `<content_dir>/split_cells.json` containing the cell IDs and absolute `.npz` paths for train / val / test — `predict_clf.ipynb` consumes this file.
+
+### Step 3 — Train (backprop, AdamW)
+```bash
+python train_clf_bml.py \
+    --content_dir ./content_bml \
+    --output_dir  ./checkpoints_clf_bml \
+    --val_ratio   0.1
+```
+Train on a single BML family:
+```bash
+python train_clf_bml.py \
+    --content_dir ./content_bml/CALB \
+    --output_dir  ./checkpoints_clf_bml_CALB \
+    --val_ratio   0.1
+```
+On start, the script prints the model architecture, layer-by-layer summary, and total/trainable parameter counts. After each epoch, it logs train/val loss + accuracy plus macro precision / recall / F1 on val. Everything printed is mirrored to `checkpoints_clf_bml/train_log_<timestamp>.txt`.
+
+Outputs:
+- `checkpoints_clf_bml/best_clf_bml.pt`
+- `checkpoints_clf_bml/dq_scaler_bml.pkl`
+- `checkpoints_clf_bml/summary_scaler_bml.pkl`
+- `checkpoints_clf_bml/clf_pred_bml.npy`, `clf_true_bml.npy`
+- `checkpoints_clf_bml/train_log_<timestamp>.txt`
+
+### Step 3b — Train with CMA-ES (no backprop, optional)
+Useful as a fine-tuner over the best AdamW checkpoint:
+```bash
+python train_clf_es_bml.py \
+    --content_dir    ./content_bml \
+    --output_dir     ./checkpoints_es_bml \
+    --pretrain_ckpt  ./checkpoints_clf_bml/best_clf_bml.pt
+```
+Also writes a `train_log_<timestamp>.txt` to `--output_dir` mirroring all stdout/stderr.
+
+### Step 4 — Inference & visualisation (`predict_clf.ipynb`)
+The notebook is wired to the BML pipeline. At the top:
+```python
+SPLIT_JSON = './content_bml/split_cells.json'   # produced in Step 2/3
+CKPT_DIR   = './checkpoints_clf_bml'            # output of Step 3
+```
+Update those paths to match your run (e.g. `./content_bml/CALB/split_cells.json` and `./checkpoints_clf_bml_CALB`), then run all cells. The notebook:
+- Reads `split_cells.json` (cell IDs + absolute paths for train / val / test).
+- Loads only the cells listed there via `_load_npz_cell`.
+- Loads `best_clf_bml.pt` and the scalers from `CKPT_DIR`.
+- Runs sliding-window prediction on every cell in the test split.
+- Produces per-cell 3-panel plots, an all-cells grid, the NEOL parity plot, and a per-cell summary table.
+
+---
+
 ## Model Architecture
 
 Input per sample: **32 cycles** = first 8 (early degradation signal) + 24 consecutive (random window).
@@ -367,23 +311,17 @@ Each cell contributes an equal number of samples per RUL class. Valid window pos
 
 ```
 battery-rul-clf/
-├── Raw/
-│   ├── Raw_MIT/             # MIT .mat files
-│   └── Raw_BML/             # BML subfolders with .pkl files and life labels
-├── content/                 # generated MIT .npz features
-├── content_bml/             # generated BML .npz features, grouped by source subfolder
-├── checkpoints_clf/         # generated MIT model outputs
+├── data/                   # raw .mat files (not committed)
+│   ├── batch1.mat
+│   ├── batch2.mat
+│   └── batch3.mat
+├── content/                # extracted .npz features (generated)
+├── checkpoints_clf/        # saved model weights (generated)
 │   └── best_clf.pt
-├── checkpoints_clf_bml/     # generated BML model outputs
-│   └── best_clf_bml.pt
-├── download.py              # download MIT dataset with kagglehub
-├── gen_features.py          # MIT .mat -> .npz feature extraction
-├── dataset_clf.py           # MIT classification dataset and dataloader
-├── train_clf.py             # MIT training loop
-├── gen_features_bml.py      # BML .pkl -> .npz feature extraction
-├── dataset_clf_bml.py       # BML classification dataset and dataloader
-├── train_clf_bml.py         # BML training loop
-├── predict_clf.ipynb        # inference and visualisation notebook
+├── gen_features.py         # .mat → .npz feature extraction
+├── dataset_clf.py          # classification dataset & dataloader
+├── train_clf.py            # training loop + BatteryRULClassifier model
+├── predict_clf.ipynb       # inference & visualisation notebook
 └── README.md
 ```
 
@@ -398,26 +336,5 @@ battery-rul-clf/
   journal = {Nature Energy},
   year    = {2019},
   doi     = {10.1038/s41560-019-0356-8}
-}
-```
-
-```bibtex
-@inproceedings{10.1145/3711896.3737372,
-  author    = {Tan, Ruifeng and Hong, Weixiang and Tang, Jiayue and Lu, Xibin
-               and Ma, Ruijun and Zheng, Xiang and Li, Jia and Huang, Jiaqiang
-               and Zhang, Tong-Yi},
-  title     = {BatteryLife: A Comprehensive Dataset and Benchmark for Battery Life Prediction},
-  year      = {2025},
-  isbn      = {9798400714542},
-  publisher = {Association for Computing Machinery},
-  address   = {New York, NY, USA},
-  url       = {https://doi.org/10.1145/3711896.3737372},
-  doi       = {10.1145/3711896.3737372},
-  booktitle = {Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery
-               and Data Mining V.2},
-  pages     = {5789--5800},
-  numpages  = {12},
-  location  = {Toronto ON, Canada},
-  series    = {KDD '25}
 }
 ```
