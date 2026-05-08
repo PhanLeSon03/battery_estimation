@@ -350,10 +350,12 @@ def train(args):
         classification_report(
             true,
             pred,
+            labels=list(range(N_CLASSES)),
             target_names=["RUL>400", "RUL>300", "RUL>200", "RUL>100", "RUL<100"],
             zero_division=0,
         )
     )
+    
     print("Confusion Matrix:")
     print(confusion_matrix(true, pred))
 

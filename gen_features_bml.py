@@ -11,6 +11,7 @@ same core shape used by the MIT pipeline:
 
 Usage:
     python gen_features_bml.py --data_dir ./Raw_BML --out_dir ./content_bml
+    python gen_features_bml.py --data_dir /home/jupyter/sonpl/Cuong_Battery/battery_estimation/Raw_BML/MATR --out_dir ./content_bml/MATR
 
 Useful variants:
     python gen_features_bml.py --data_dir ./Raw_BML --out_dir content_bml --max_files 5
@@ -32,7 +33,7 @@ import numpy as np
 V_BINS = 1000
 LABEL_DIR_NAMES = ("Life labels", "Life labels 2")
 EOL_FRACTION = 0.80   # capacity retention threshold that defines end-of-life
-
+MIN_CUR  = 1e-1
 
 def _find_eol_idx(qd: np.ndarray, eol_fraction: float = EOL_FRACTION) -> int:
     """Return the array index that marks end-of-life for this cell.
@@ -137,7 +138,7 @@ def _collect_voltage_limits(cell: dict, cycles: list[dict]) -> tuple[float, floa
         current = _safe_array(cyc.get("current_in_A"))
         n = min(v.size, current.size)
         if n >= 2:
-            discharge = np.isfinite(v[:n]) & np.isfinite(current[:n]) & (current[:n] < -1e-6)
+            discharge = np.isfinite(v[:n]) & np.isfinite(current[:n]) & (current[:n] < -MIN_CUR)
             if discharge.sum() >= 2:
                 samples.append(v[:n][discharge])
                 continue
@@ -180,41 +181,42 @@ def _dedupe_interp(x: np.ndarray, y: np.ndarray, grid: np.ndarray) -> np.ndarray
     return np.interp(grid, unique_x, unique_y).astype(np.float32)
 
 
+
+
 def _discharge_arrays(cycle: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    
+    qd      = _safe_array(cycle.get("discharge_capacity_in_Ah"))
+    
     voltage = _safe_array(cycle.get("voltage_in_V"))
-    qd = _safe_array(cycle.get("discharge_capacity_in_Ah"))
     current = _safe_array(cycle.get("current_in_A"))
-    time_s = _safe_array(cycle.get("time_in_s"))
+    time_s  = _safe_array(cycle.get("time_in_s"))
+    
+
     n = min(voltage.size, qd.size, current.size, time_s.size)
-    if n < 2:
-        return (
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-        )
 
     voltage = voltage[:n]
-    qd = qd[:n]
+    qd      = qd[:n]
     current = current[:n]
-    time_s = time_s[:n]
-    valid = np.isfinite(voltage) & np.isfinite(qd) & np.isfinite(current) & np.isfinite(time_s)
-    discharge = valid & (current < -1e-6)
+    time_s  = time_s[:n]
+    valid     = np.isfinite(voltage) & np.isfinite(qd) & np.isfinite(current) & np.isfinite(time_s)
+    discharge = valid & (current < -MIN_CUR)
+    
+    
+    discharge_idx = np.where(discharge)
+    
+    voltage = voltage[discharge_idx]
+    qd      = qd[discharge_idx]
+    current = current[discharge_idx]
+    time_s  = time_s[discharge_idx]
+    time_s  = time_s - time_s[0]
 
-    # A few BML files have sparse or odd current signs.  If current does not
-    # identify discharge, fall back to points where discharge capacity is active.
-    if discharge.sum() < 2:
-        discharge = valid & (qd > 0)
 
-    if discharge.sum() < 2:
-        return (
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-        )
+    # print('_discharge_arrays')
+    # print(f'voltage.size {voltage.size}, qd.size {qd.size}, current.size {current.size}, time_s.size {time_s.size}')
+    # print(current)
+    
 
-    return voltage[discharge], qd[discharge], current[discharge], time_s[discharge]
+    return voltage, qd, current, time_s
 
 
 def _charge_arrays(cycle: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -222,31 +224,30 @@ def _charge_arrays(cycle: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.
     qc      = _safe_array(cycle.get("charge_capacity_in_Ah"))
     current = _safe_array(cycle.get("current_in_A"))
     time_s  = _safe_array(cycle.get("time_in_s"))
+    
     n = min(voltage.size, qc.size, current.size, time_s.size)
-    if n < 2:
-        return (
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-        )
+
     voltage = voltage[:n]
     qc      = qc[:n]
     current = current[:n]
     time_s  = time_s[:n]
+    
     valid  = np.isfinite(voltage) & np.isfinite(qc) & np.isfinite(current) & np.isfinite(time_s)
-    charge = valid & (current > 1e-6)
-    # fallback: if current does not identify charge, use points where charge capacity is active
-    if charge.sum() < 2:
-        charge = valid & (qc > 0)
-    if charge.sum() < 2:
-        return (
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-            np.zeros(0, dtype=np.float32),
-        )
-    return voltage[charge], qc[charge], current[charge], time_s[charge]
+    charge = valid & (current > MIN_CUR)
+    
+    charge_idx = np.where(charge)
+    
+    voltage = voltage[charge_idx]
+    qc      = qc[charge_idx]
+    current = current[charge_idx]
+    time_s  = time_s[charge_idx]
+    time_s  = time_s - time_s[0]
+    
+    # print('_charge_arrays')
+    # print(f'voltage.size {voltage.size}, qc.size {qc.size}, current.size {current.size}, time_s.size {time_s.size}')
+    # print(current)
+ 
+    return voltage, qc, current, time_s
 
 
 def _cycle_qdlin(cycle: dict, voltage_grid: np.ndarray) -> np.ndarray:
@@ -278,7 +279,7 @@ def _cycle_charge_time(cycle: dict) -> float:
     if valid.sum() < 2:
         return 0.0
 
-    charge = valid & (current > 1e-6)
+    charge = valid & (current > MIN_CUR)
     if charge.sum() >= 2:
         return float(np.nanmax(time_s[charge]) - np.nanmin(time_s[charge]))
     return 0.0
@@ -369,16 +370,18 @@ def extract_pkl(path: Path, data_dir: Path, out_dir: Path, labels: dict[str, int
     voltage_grid = np.linspace(vmin, vmax, V_BINS, dtype=np.float32)
     already_spent = int(cell.get("already_spent_cycles") or 0)
 
-    qd = []
-    chargetime = []
+    Qd = []
+    Qc = []
+    c_t = []
     dqdv_slope_max = []
     dqdv_slope_min = []
     dqdv_min = []
     dqdv_avg = []
-    log_std_dq = []
-    log_std_dc = []
-    log_std_I = []
-    log_std_ct = []
+    log_std_Qd = []
+    log_std_Qc = []
+    log_std_Id = []
+    log_std_Ic = []
+    dc_t = []
     qdlin_list = []
     dqdv_list = []
     cycle_index = []
@@ -387,16 +390,19 @@ def extract_pkl(path: Path, data_dir: Path, out_dir: Path, labels: dict[str, int
         if not isinstance(cycle, dict):
             continue
 
-        _, qd_raw, current, time_s = _discharge_arrays(cycle)
-        _, qc_raw, _, _ = _charge_arrays(cycle)
+        _, dq_raw, Id, discharge_time = _discharge_arrays(cycle)
+        _, cq_raw, Ic, charge_time = _charge_arrays(cycle)
 
         qd_curve = _cycle_qdlin(cycle, voltage_grid)
         
         dqdv_curve = np.gradient(qd_curve, voltage_grid).astype(np.float32)
         dqdv_curve = _interp_nan(dqdv_curve)
 
-        qd.append(float(np.nanmax(qd_raw)) if qd_raw.size else 0.0)
-        chargetime.append(_cycle_charge_time(cycle))
+        Qd.append(float(np.nanmax(dq_raw)) if dq_raw.size else 0.0)
+        Qc.append(float(np.nanmax(cq_raw)) if dq_raw.size else 0.0)
+        c_t.append(charge_time[-1])
+#         print(f'charge_time: {charge_time[-1]}')
+#         print(f'discharge_time: {discharge_time[-1]}')
         
         dqdv  = dqdv_curve[100:900] # get midle window                        
         dqdv = np.convolve(dqdv, np.ones(10)/10, mode='valid') 
@@ -406,10 +412,11 @@ def extract_pkl(path: Path, data_dir: Path, out_dir: Path, labels: dict[str, int
         
         dqdv_min.append(float(np.nanmin(dqdv_curve)) if dqdv_curve.size else 0.0)
         dqdv_avg.append(float(np.nanmean(dqdv_curve)) if dqdv_curve.size else 0.0)
-        log_std_dq.append(_log_std(qd_raw))
-        log_std_dc.append(_log_std(qc_raw))
-        log_std_I.append(_log_std(current))
-        log_std_ct.append(_log_std(time_s))
+        log_std_Qd.append(_log_std(dq_raw))
+        log_std_Qc.append(_log_std(cq_raw))
+        log_std_Id.append(_log_std(Id))
+        log_std_Ic.append(_log_std(Ic))
+        dc_t.append(discharge_time[-1])
         qdlin_list.append(_interp(qd_curve))
         dqdv_list.append(_interp(dqdv_curve))
         cycle_index.append(_cycle_number(cycle, idx, already_spent))
@@ -419,7 +426,9 @@ def extract_pkl(path: Path, data_dir: Path, out_dir: Path, labels: dict[str, int
         return False
 
     # ── Truncate arrays at EOL (80 % of Q_init, or min-Qd fallback) ──────
-    qd_arr  = _interp_nan(np.asarray(qd, dtype=np.float32))
+    qd_arr  = _interp_nan(np.asarray(Qd, dtype=np.float32))
+    qc_arr  = _interp_nan(np.asarray(Qc, dtype=np.float32))
+    
     ci_arr  = np.asarray(cycle_index, dtype=np.int32)
     eol_idx = _find_eol_idx(qd_arr)
     n_keep  = min(eol_idx + 1, len(qd_arr))   # include the EOL cycle itself
@@ -462,20 +471,22 @@ def extract_pkl(path: Path, data_dir: Path, out_dir: Path, labels: dict[str, int
         cycle_life=np.array(cycle_life, dtype=np.int32),
         cycle_index=ci_arr[:n_keep],
         qd         = qd_arr[:n_keep],
+        qc         = qc_arr[:n_keep],
         IR         = np.zeros_like(qd_arr[:n_keep]), # dummy values
         tmax       = np.zeros_like(qd_arr[:n_keep]), # dummy values
         tavg       = np.zeros_like(qd_arr[:n_keep]), # dummy values
-        chargetime=_interp_nan(np.asarray(chargetime,  dtype=np.float32))[:n_keep],
+        c_t        =_interp_nan(np.asarray(c_t,  dtype=np.float32))[:n_keep],
         dqdv_slope_max  =_interp_nan(np.asarray(dqdv_slope_max,   dtype=np.float32))[:n_keep],
         dqdv_slope_min  =_interp_nan(np.asarray(dqdv_slope_min,   dtype=np.float32))[:n_keep],
         dqdv_min  =_interp_nan(np.asarray(dqdv_min,   dtype=np.float32))[:n_keep],
         dqdv_avg  =_interp_nan(np.asarray(dqdv_avg,   dtype=np.float32))[:n_keep],
-        log_std_dq=_interp_nan(np.asarray(log_std_dq, dtype=np.float32))[:n_keep],
-        log_std_dc=_interp_nan(np.asarray(log_std_dc, dtype=np.float32))[:n_keep],
-        log_std_I =_interp_nan(np.asarray(log_std_I,  dtype=np.float32))[:n_keep],
-        log_std_ct=_interp_nan(np.asarray(log_std_ct, dtype=np.float32))[:n_keep],
-        qdlin=np.stack(qdlin_list, axis=0).astype(np.float32)[:n_keep],
-        dqdv =np.stack(dqdv_list,  axis=0).astype(np.float32)[:n_keep],
+        log_std_Qd=_interp_nan(np.asarray(log_std_Qd, dtype=np.float32))[:n_keep],
+        log_std_Qc=_interp_nan(np.asarray(log_std_Qc, dtype=np.float32))[:n_keep],
+        log_std_Id =_interp_nan(np.asarray(log_std_Id,  dtype=np.float32))[:n_keep],
+        log_std_Ic =_interp_nan(np.asarray(log_std_Ic,  dtype=np.float32))[:n_keep],
+        dc_t      =_interp_nan(np.asarray(dc_t, dtype=np.float32))[:n_keep],
+        qdlin     =np.stack(qdlin_list, axis=0).astype(np.float32)[:n_keep],
+        dqdv =    np.stack(dqdv_list,  axis=0).astype(np.float32)[:n_keep],
     )
     return True
 

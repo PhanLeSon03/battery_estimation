@@ -101,6 +101,7 @@ def _arr(data, key: str, dtype=np.float32) -> np.ndarray:
 def _load_npz_cell(path: str) -> dict:
     with np.load(path, allow_pickle=True) as d:
         qd          = _arr(d, "qd")
+        qc          = _arr(d, "qc")
         cycle_index = _arr(d, "cycle_index", dtype=np.int32)
         qdlin_raw   = np.asarray(d["qdlin"], dtype=np.float32)
         dqdv_raw    = (np.asarray(d["dqdv"], dtype=np.float32)
@@ -122,16 +123,18 @@ def _load_npz_cell(path: str) -> dict:
             "cycle_life":  cycle_life,
             "cycle_index": cycle_index[:n_keep],
             "summary": {
-                "QDischarge":    qd[:n_keep],
-                "chargetime":    _arr(d, "chargetime")[:n_keep],
+                "Qd":    qd[:n_keep],
+                "Qc":    qd[:n_keep],
+                "c_t":    _arr(d, "c_t")[:n_keep],
+                "dc_t":    _arr(d, "dc_t")[:n_keep],
                 "dqdv_slope_max": _arr(d, "dqdv_slope_max")[:n_keep],
                 "dqdv_slope_min": _arr(d, "dqdv_slope_min")[:n_keep],
                 "dqdv_min":      _arr(d, "dqdv_min")[:n_keep],
                 "dqdv_avg":      _arr(d, "dqdv_avg")[:n_keep],
-                "log_std_dq":    _arr(d, "log_std_dq")[:n_keep],
-                "log_std_dc":    _arr(d, "log_std_dc")[:n_keep],
-                "log_std_I":     _arr(d, "log_std_I")[:n_keep],
-                "log_std_ct":    _arr(d, "log_std_ct")[:n_keep],
+                "log_std_Qd":    _arr(d, "log_std_Qd")[:n_keep],
+                "log_std_Qc":    _arr(d, "log_std_Qc")[:n_keep],
+                "log_std_Id":     _arr(d, "log_std_Id")[:n_keep],
+                "log_std_Ic":     _arr(d, "log_std_Ic")[:n_keep],
             },
             "qdlin": [x for x in qdlin_raw[:n_keep]],
             "dqdv":  [x for x in dqdv_raw[:n_keep]] if dqdv_raw.ndim > 1 else [],
@@ -181,7 +184,7 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
         cycle_life  = int(cell["cycle_life"])
         cycle_index = np.asarray(cell.get("cycle_index", []), dtype=np.int32).reshape(-1)
         n_cyc       = min(
-            len(cell["summary"]["QDischarge"]),
+            len(cell["summary"]["Qd"]),
             len(cell["qdlin"]),
         )
         if cycle_index.size:
@@ -219,7 +222,13 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
 # -------------------------------------------------------------------------
 # Per-cell cache — built once on first access, sliced per __getitem__
 # -------------------------------------------------------------------------
-_N_SUMMARY_BML = 14   # 10 scalars + 4 PE values
+_SUMMARY_KEYS_BML = (
+    "Qd", "Qc", "c_t", "dc_t",
+    "dqdv_slope_max", "dqdv_slope_min", "dqdv_min", "dqdv_avg",
+    "log_std_Qd", "log_std_Qc", "log_std_Id", "log_std_Ic"
+)  
+
+_N_SUMMARY_BML = len(_SUMMARY_KEYS_BML) + 4   # X scalars + 4 PE values
 
 
 class _CellCache:
@@ -264,13 +273,6 @@ class _CellCache:
 # -------------------------------------------------------------------------
 # Feature helpers
 # -------------------------------------------------------------------------
-_SUMMARY_KEYS_BML = (
-    "QDischarge", "chargetime",
-    "dqdv_slope_max", "dqdv_slope_min", "dqdv_min", "dqdv_avg",
-    "log_std_dq", "log_std_dc", "log_std_I", "log_std_ct",
-)   # 10 scalars
-
-
 def _get_summary_row(summary: dict, c: int,
                      cycle_index: np.ndarray = None, d_pos: int = 5) -> np.ndarray:
     # use real cycle number for PE if available
