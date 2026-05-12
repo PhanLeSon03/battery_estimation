@@ -15,32 +15,17 @@ ES strategy: CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
 
 Usage:
     python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml
-    python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml --pretrain_ckpt checkpoints_clf_bml/best_clf_bml.pt
+    python train_clf_es_bml.py --content_dir ./content_bml/MATR --output_dir ./checkpoints_clf_bml_MATR_es --pretrain_ckpt checkpoints_clf_bml_MATR/best_clf_bml.pt
 """
 
 import os
-import sys
 import argparse
-from datetime import datetime
-
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import classification_report, confusion_matrix
 import cma   # pip install cma
-
-
-class _Tee:
-    def __init__(self, *streams):
-        self.streams = streams
-    def write(self, data):
-        for s in self.streams:
-            s.write(data)
-            s.flush()
-    def flush(self):
-        for s in self.streams:
-            s.flush()
 
 from dataset_clf_bml import build_clf_dataloaders, N_CLASSES, N_INPUT, V_BINS  # BML dataset
 from train_clf import BatteryRULClassifier, evaluate, OrdinalLoss, predict_cls, ordinal_predict 
@@ -253,26 +238,15 @@ def train(args):
     set_seed(args.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    os.makedirs(args.output_dir, exist_ok=True)
-
-    log_path = os.path.join(
-        args.output_dir,
-        f"train_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-    )
-    log_file = open(log_path, "w", buffering=1)
-    sys.stdout = _Tee(sys.__stdout__, log_file)
-    sys.stderr = _Tee(sys.__stderr__, log_file)
-
-    print(f"Log file: {log_path}")
-    print(f"Args: {vars(args)}")
     print(f"Device: {device}")
+    os.makedirs(args.output_dir, exist_ok=True)
 
     print("\nLoading data...")
     train_loader, val_loader, test_loader, scalers = build_clf_dataloaders(
         content_dir = args.content_dir,
         batch_size  = args.batch_size,
         n_samples   = args.n_samples,
-        val_ratio   = 0.2,
+        val_ratio   = 0.1,
         num_workers = args.num_workers,
         seed        = args.seed,
     )
@@ -293,13 +267,8 @@ def train(args):
         dropout       = 0.0,           # dropout off — ES evaluates deterministically
     ).to(device)
 
-    print("\nModel architecture:")
-    print(model)
-
     n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    n_total  = sum(p.numel() for p in model.parameters())
-    print(f"\nTotal parameters:     {n_total:,}")
-    print(f"Trainable parameters: {n_params:,}\n")
+    print(f"Model parameters: {n_params:,}\n")
 
     # ── Layer-by-layer summary ────────────────────────────────────────────────
     print("Model Summary:")
@@ -422,7 +391,7 @@ if __name__ == "__main__":
                         choices=["cross_entropy", "ordinal"],
                         help="Loss function for final test evaluation only")
     # ── CMA-ES hyperparameters ───────────────────────────────────────────
-    parser.add_argument("--n_gen",   type=int,   default=200,  help="max generations")
+    parser.add_argument("--n_gen",   type=int,   default=20,  help="max generations")
     parser.add_argument("--sigma",   type=float, default=0.02, help="initial step size (sigma0)")
     parser.add_argument("--popsize", type=int,   default=None,
                         help="CMA population size; None = auto (4 + 3*ln(n_params))")

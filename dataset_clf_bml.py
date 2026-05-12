@@ -23,7 +23,6 @@ How to run:
 """
 
 import argparse
-import json
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -102,6 +101,7 @@ def _arr(data, key: str, dtype=np.float32) -> np.ndarray:
 def _load_npz_cell(path: str) -> dict:
     with np.load(path, allow_pickle=True) as d:
         qd          = _arr(d, "qd")
+        qc          = _arr(d, "qc")
         cycle_index = _arr(d, "cycle_index", dtype=np.int32)
         qdlin_raw   = np.asarray(d["qdlin"], dtype=np.float32)
         dqdv_raw    = (np.asarray(d["dqdv"], dtype=np.float32)
@@ -123,16 +123,18 @@ def _load_npz_cell(path: str) -> dict:
             "cycle_life":  cycle_life,
             "cycle_index": cycle_index[:n_keep],
             "summary": {
-                "QDischarge":    qd[:n_keep],
-                "chargetime":    _arr(d, "chargetime")[:n_keep],
+                "Qd":    qd[:n_keep],
+                "Qc":    qd[:n_keep],
+                "c_t":    _arr(d, "c_t")[:n_keep],
+                "dc_t":    _arr(d, "dc_t")[:n_keep],
                 "dqdv_slope_max": _arr(d, "dqdv_slope_max")[:n_keep],
                 "dqdv_slope_min": _arr(d, "dqdv_slope_min")[:n_keep],
                 "dqdv_min":      _arr(d, "dqdv_min")[:n_keep],
                 "dqdv_avg":      _arr(d, "dqdv_avg")[:n_keep],
-                "log_std_dq":    _arr(d, "log_std_dq")[:n_keep],
-                "log_std_dc":    _arr(d, "log_std_dc")[:n_keep],
-                "log_std_I":     _arr(d, "log_std_I")[:n_keep],
-                "log_std_ct":    _arr(d, "log_std_ct")[:n_keep],
+                "log_std_Qd":    _arr(d, "log_std_Qd")[:n_keep],
+                "log_std_Qc":    _arr(d, "log_std_Qc")[:n_keep],
+                "log_std_Id":     _arr(d, "log_std_Id")[:n_keep],
+                "log_std_Ic":     _arr(d, "log_std_Ic")[:n_keep],
             },
             "qdlin": [x for x in qdlin_raw[:n_keep]],
             "dqdv":  [x for x in dqdv_raw[:n_keep]] if dqdv_raw.ndim > 1 else [],
@@ -154,7 +156,6 @@ def load_all_npz(content_dir: str) -> dict:
         cell_id = "__".join(rel.with_suffix("").parts)
         try:
             cells[cell_id] = _load_npz_cell(str(path))
-            cells[cell_id]["_path"] = str(path)
         except Exception as exc:
             print(f"  WARNING: could not load {path}: {exc}")
 
@@ -183,7 +184,7 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
         cycle_life  = int(cell["cycle_life"])
         cycle_index = np.asarray(cell.get("cycle_index", []), dtype=np.int32).reshape(-1)
         n_cyc       = min(
-            len(cell["summary"]["QDischarge"]),
+            len(cell["summary"]["Qd"]),
             len(cell["qdlin"]),
         )
         if cycle_index.size:
@@ -192,23 +193,20 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
         if n_cyc < N_INPUT:
             continue
 
-        def observed_cycle(c: int) -> int:
-            if cycle_index.size and c < cycle_index.size:
-                return int(cycle_index[c])
-            return c + 1
-
         max_start    = n_cyc - N_RANDOM
         class_starts = {c: [] for c in range(N_CLASSES)}
 
         for start in range(N_EARLY, max_start + 1):
             if start + N_RANDOM > n_cyc - 4:   # 4-cycle safety margin
                 continue
-            end_cycle = observed_cycle(start + N_RANDOM - 1)
+            end_cycle = int(cycle_index[start + N_RANDOM - 1]) 
             rul       = max(0, cycle_life - end_cycle)
             label     = rul_to_class(rul)
             class_starts[label].append(start)
 
-        n_per_class = max(1, n_samples // N_CLASSES)
+        # n_per_class = max(1, n_samples // N_CLASSES)
+        n_per_class = min(len(class_starts[c]) for c in range(N_CLASSES))
+        
         for label, starts_list in class_starts.items():
             if not starts_list:
                 continue
@@ -216,7 +214,7 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
                                    size=min(n_per_class, len(starts_list)),
                                    replace=False)
             for s in pick:
-                end_cycle = observed_cycle(int(s) + N_RANDOM - 1)
+                end_cycle = int(cycle_index[int(s) + N_RANDOM - 1])
                 index.append((cid, int(s), label,
                                max(0, cycle_life - end_cycle)))
 
@@ -226,7 +224,19 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
 # -------------------------------------------------------------------------
 # Per-cell cache — built once on first access, sliced per __getitem__
 # -------------------------------------------------------------------------
-_N_SUMMARY_BML = 14   # 10 scalars + 4 PE values
+_SUMMARY_KEYS_BML = (
+    "Qd", "Qc", "c_t", "dc_t",
+    "dqdv_slope_max", "dqdv_slope_min", "dqdv_min", "dqdv_avg",
+    "log_std_Qd", "log_std_Qc", "log_std_Id", "log_std_Ic"
+) 
+
+# _SUMMARY_KEYS_BML = (
+#     "Qd",  "c_t", 
+#     "dqdv_min", 
+#     "log_std_Qd", "log_std_Qc", "log_std_Id"
+# ) 
+
+_N_SUMMARY_BML = len(_SUMMARY_KEYS_BML) + 4   # X scalars + 4 PE values
 
 
 class _CellCache:
@@ -271,13 +281,6 @@ class _CellCache:
 # -------------------------------------------------------------------------
 # Feature helpers
 # -------------------------------------------------------------------------
-_SUMMARY_KEYS_BML = (
-    "QDischarge", "chargetime",
-    "dqdv_slope_max", "dqdv_slope_min", "dqdv_min", "dqdv_avg",
-    "log_std_dq", "log_std_dc", "log_std_I", "log_std_ct",
-)   # 10 scalars
-
-
 def _get_summary_row(summary: dict, c: int,
                      cycle_index: np.ndarray = None, d_pos: int = 5) -> np.ndarray:
     # use real cycle number for PE if available
@@ -383,7 +386,7 @@ class BMLBatteryClsDataset(Dataset):
             self.summary_scaler = None
 
     # ── Fit scalers by sampling a subset ─────────────────────────────────
-    def _fit_scalers(self, seed: int, max_fit: int = 2000):
+    def _fit_scalers(self, seed: int, max_fit: int = 10000):
         print("  Fitting scalers on subset...")
         rng    = np.random.default_rng(seed)
         subset = rng.choice(len(self.index),
@@ -453,32 +456,20 @@ def build_clf_dataloaders(
     test_ids = ids[n_val:2*n_val]
     trn_ids = ids[2*n_val:]
 
-    print(f"Split — Train: {len(trn_ids)}  Val: {len(val_ids)}  Test: {len(test_ids)}")
-    print("\n[Train cells]")
-    for cid in trn_ids:
-        print(f"  {cid}")
-    print("\n[Val cells]")
-    for cid in val_ids:
-        print(f"  {cid}")
-    print("\n[Test cells]")
-    for cid in test_ids:
-        print(f"  {cid}")
+    def _format_cell_list(name: str, ids: list, per_line: int = 4) -> str:
+        if not ids:
+            return f"{name} = []"
+        lines  = [ids[i:i+per_line] for i in range(0, len(ids), per_line)]
+        indent = " " * (len(name) + 4)
+        inner  = (",\n" + indent).join(", ".join(f"'{n}'" for n in line) for line in lines)
+        return f"{name} = [{inner}]"
 
-    split_path = Path(content_dir) / "split_cells.json"
-    split_path.parent.mkdir(parents=True, exist_ok=True)
-    paths_map = {cid: cells[cid].get("_path", "") for cid in ids}
-    with open(split_path, "w") as f:
-        json.dump(
-            {
-                "content_dir": str(Path(content_dir).resolve()),
-                "train": list(trn_ids),
-                "val":   list(val_ids),
-                "test":  list(test_ids),
-                "paths": paths_map,
-            },
-            f, indent=2,
-        )
-    print(f"\nSplit written to: {split_path}")
+    print(_format_cell_list("TrainCellName", trn_ids))
+    print(_format_cell_list("ValCellName",   val_ids))
+    print(_format_cell_list("TestCellName",  test_ids))
+
+    print(f"Split — Train: {len(trn_ids)}  Val: {len(val_ids)}   Test: {len(test_ids)}")
+
 
     print("Building train dataset...")
     train_ds = BMLBatteryClsDataset(cells, trn_ids, n_samples,
@@ -489,6 +480,7 @@ def build_clf_dataloaders(
     val_ds   = BMLBatteryClsDataset(cells, val_ids, n_samples,
                                     scalers=scalers, seed=seed + 1)
 
+    print("Building test dataset...")
     test_ds = BMLBatteryClsDataset(cells, test_ids, n_samples,
                                     scalers=scalers, seed=seed + 2)
 

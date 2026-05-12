@@ -161,12 +161,11 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                 dqdv_slope_min   = []
                 dqdv_min         = []
                 dqdv_avg         = []
-                log_std_dq       = []
-                log_std_dc       = []
-                log_std_T        = []
-                log_std_I        = []
+                log_std_dq       = [] 
+                log_std_dc       = [] 
+                log_std_T        = [] 
+                log_std_I        = [] 
                 log_std_ct       = []
-                dischargetime_list = []
 
                 for j in range(n_cyc):
                     try:
@@ -197,18 +196,14 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                         T_c   = _interp_nan(f[T_ds[j, 0]][()].flatten().astype(np.float32))
                         I_c   = _interp_nan(f[I_ds[j, 0]][()].flatten().astype(np.float32))
                         ct_c  = _interp_nan(f[ct_ds[j, 0]][()].flatten().astype(np.float32))
-
-                        charge_mask    = I_c > 1e-6
-                        discharge_mask = I_c < -1e-6
-                        I_charge    = I_c[charge_mask]
-                        t_charge    = ct_c[charge_mask]
-                        t_discharge = ct_c[discharge_mask]
-
+                        
                         dqdv  = dqdv[100:900] # get midle window
-
-                        dqdv = np.convolve(dqdv, np.ones(10)/10, mode='valid')
+   
+                                             
+                        
+                        dqdv = np.convolve(dqdv, np.ones(10)/10, mode='valid') 
                         dqdv_slope = np.diff(dqdv)
-
+                        
                         dqdv_slope_max.append(float(np.max(dqdv_slope)))
                         dqdv_slope_min.append(float(np.min(dqdv_slope)))
                         dqdv_min.append(float(np.min(dqdv)))
@@ -216,10 +211,9 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                         log_std_dq.append(float(20.0 * np.log10(np.std(qd_c).clip(1e-9))))
                         log_std_dc.append(float(20.0 * np.log10(np.std(qc_c).clip(1e-9))))
                         log_std_T.append( float(20.0 * np.log10(np.std(T_c).clip(1e-9))))
-                        log_std_I.append(float(20.0 * np.log10(np.std(I_charge).clip(1e-9))) if I_charge.size >= 2 else 0.0)    # charge current
-                        log_std_ct.append(float(20.0 * np.log10(np.std(t_charge).clip(1e-9))) if t_charge.size >= 2 else 0.0)    # charge timestamps
-                        dischargetime_list.append(float(np.nanmax(t_discharge) - np.nanmin(t_discharge)) if t_discharge.size >= 2 else 0.0)
-
+                        log_std_I.append(float(20.0 * np.log10(np.std(I_c).clip(1e-9))))
+                        log_std_ct.append(float(20.0 * np.log10(np.std(ct_c).clip(1e-9))))
+                        
                     except Exception:
                         dqdv_slope_max.append(0.0)
                         dqdv_slope_min.append(0.0)
@@ -230,7 +224,6 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                         log_std_T.append(0.0)
                         log_std_I.append(0.0)
                         log_std_ct.append(0.0)
-                        dischargetime_list.append(0.0)
 
                 out_path = os.path.join(out_dir, f"{batch_prefix}c{i:03d}.npz")
                 np.savez_compressed(
@@ -241,8 +234,7 @@ def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
                     IR         = IR,
                     tmax       = tmax,
                     tavg       = tavg,
-                    chargetime    = chargetime,
-                    dischargetime = _interp_nan(np.array(dischargetime_list, dtype=np.float32)),
+                    chargetime = chargetime,
                     dqdv_slope_max   = np.array(dqdv_slope_max, dtype=np.float32),
                     dqdv_slope_min   = np.array(dqdv_slope_min, dtype=np.float32),
                     dqdv_min   = np.array(dqdv_min, dtype=np.float32),
