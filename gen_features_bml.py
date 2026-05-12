@@ -208,6 +208,17 @@ def _discharge_arrays(cycle: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray, 
     qd      = qd[discharge_idx]
     current = current[discharge_idx]
     time_s  = time_s[discharge_idx]
+    
+    if time_s.size == 0:
+        print(f'voltage.size {voltage.size}, qc.size {qd.size}, current.size {current.size}, time_s.size {time_s.size}')
+        print(valid.size)
+        return (
+            np.zeros(1, dtype=np.float32),
+            np.zeros(1, dtype=np.float32),
+            np.zeros(1, dtype=np.float32),
+            np.zeros(1, dtype=np.float32),
+        )
+    
     time_s  = time_s - time_s[0]
 
 
@@ -226,6 +237,10 @@ def _charge_arrays(cycle: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.
     time_s  = _safe_array(cycle.get("time_in_s"))
     
     n = min(voltage.size, qc.size, current.size, time_s.size)
+    
+    # print('_charge_arrays')
+    # print(f'voltage.size {voltage.size}, qc.size {qc.size}, current.size {current.size}, time_s.size {time_s.size}')
+    # print(current)
 
     voltage = voltage[:n]
     qc      = qc[:n]
@@ -241,6 +256,18 @@ def _charge_arrays(cycle: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.
     qc      = qc[charge_idx]
     current = current[charge_idx]
     time_s  = time_s[charge_idx]
+    
+    if time_s.size == 0:
+        print('_charge_arrays')
+        print(f'voltage.size {voltage.size}, qc.size {qc.size}, current.size {current.size}, time_s.size {time_s.size}')
+        print(valid.size)
+        return (
+            np.zeros(1, dtype=np.float32),
+            np.zeros(1, dtype=np.float32),
+            np.zeros(1, dtype=np.float32),
+            np.zeros(1, dtype=np.float32),
+        )
+    
     time_s  = time_s - time_s[0]
     
     # print('_charge_arrays')
@@ -527,12 +554,12 @@ def main() -> None:
     failed = 0
     for i, path in enumerate(files, start=1):
         print(f"[{i}/{len(files)}] {path}")
-        try:
-            if extract_pkl(path, data_dir, out_dir, labels):
-                saved += 1
-        except Exception as exc:
-            failed += 1
-            print(f"  WARNING: failed {path}: {exc}")
+        # try:
+        if extract_pkl(path, data_dir, out_dir, labels):
+            saved += 1
+        # except Exception as exc:
+        #     failed += 1
+        #     print(f"  WARNING: failed {path}: {exc}")
 
     print(f"\nDone. Saved: {saved}  Failed: {failed}  Output: {out_dir}")
 

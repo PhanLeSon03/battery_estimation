@@ -204,7 +204,9 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
             label     = rul_to_class(rul)
             class_starts[label].append(start)
 
-        n_per_class = max(1, n_samples // N_CLASSES)
+        # n_per_class = max(1, n_samples // N_CLASSES)
+        n_per_class = min(len(class_starts[c]) for c in range(N_CLASSES))
+        
         for label, starts_list in class_starts.items():
             if not starts_list:
                 continue
@@ -226,7 +228,13 @@ _SUMMARY_KEYS_BML = (
     "Qd", "Qc", "c_t", "dc_t",
     "dqdv_slope_max", "dqdv_slope_min", "dqdv_min", "dqdv_avg",
     "log_std_Qd", "log_std_Qc", "log_std_Id", "log_std_Ic"
-)  
+) 
+
+# _SUMMARY_KEYS_BML = (
+#     "Qd",  "c_t", 
+#     "dqdv_min", 
+#     "log_std_Qd", "log_std_Qc", "log_std_Id"
+# ) 
 
 _N_SUMMARY_BML = len(_SUMMARY_KEYS_BML) + 4   # X scalars + 4 PE values
 
