@@ -35,7 +35,7 @@ from torch.utils.data import DataLoader, Dataset
 EOL_FRACTION = 0.80   # capacity retention threshold that defines end-of-life
 
 N_EARLY   = 8     # always include first 8 cycles
-N_RANDOM  = 24    # random consecutive window
+N_RANDOM  = 8     # random consecutive window
 N_INPUT   = N_EARLY + N_RANDOM   # 32 total
 N_CLASSES = 5
 
@@ -225,7 +225,7 @@ def build_sample_index(cells: dict, cell_ids: list, seed: int = 42,
 # Per-cell cache — built once on first access, sliced per __getitem__
 # -------------------------------------------------------------------------
 _SUMMARY_KEYS_BML = (
-    "Qd", "Qc", "c_t", "dc_t",
+    "Qd", "c_t", "dc_t",
     "dqdv_slope_max", "dqdv_slope_min", "dqdv_min", "dqdv_avg",
     "log_std_Qd", "log_std_Qc", "log_std_Id", "log_std_Ic"
 ) 
@@ -236,7 +236,7 @@ _SUMMARY_KEYS_BML = (
 #     "log_std_Qd", "log_std_Qc", "log_std_Id"
 # ) 
 
-_N_SUMMARY_BML = len(_SUMMARY_KEYS_BML) + 4   # X scalars + 4 PE values
+_N_SUMMARY_BML = len(_SUMMARY_KEYS_BML) + 3   # X scalars + 4 PE values
 
 
 class _CellCache:
@@ -302,7 +302,7 @@ def _get_summary_row(summary: dict, c: int,
         [safe(np.asarray(summary[k], dtype=np.float32)) for k in _SUMMARY_KEYS_BML],
         dtype=np.float32,
     )
-    return np.concatenate([scalar_feats, pe])   # (14,)
+    return np.concatenate([scalar_feats, pe[:3]])   # (14,)
 
 
 def _build_sample_tensors(cell: dict, start: int,
@@ -457,7 +457,7 @@ def build_clf_dataloaders(
     trn_ids = ids[2*n_val:]
 
     per_line = 4
-    lines = [val_ids[i:i+per_line] for i in range(0, len(val_ids), per_line)]
+    lines = [test_ids[i:i+per_line] for i in range(0, len(test_ids), per_line)]
     inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
     print(f"TestCellName = [{inner}]")
 
