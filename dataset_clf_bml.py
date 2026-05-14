@@ -236,7 +236,7 @@ _SUMMARY_KEYS_BML = (
 #     "log_std_Qd", "log_std_Qc", "log_std_Id"
 # ) 
 
-_N_SUMMARY_BML = len(_SUMMARY_KEYS_BML) + 3   # X scalars + 4 PE values
+_N_SUMMARY_BML = len(_SUMMARY_KEYS_BML) + 1   # X scalars + 4 PE values
 
 
 class _CellCache:
@@ -302,7 +302,7 @@ def _get_summary_row(summary: dict, c: int,
         [safe(np.asarray(summary[k], dtype=np.float32)) for k in _SUMMARY_KEYS_BML],
         dtype=np.float32,
     )
-    return np.concatenate([scalar_feats, pe[:3]])   # (14,)
+    return np.concatenate([scalar_feats, [c/5000]])   # (12,)
 
 
 def _build_sample_tensors(cell: dict, start: int,

@@ -513,8 +513,8 @@ if __name__ == "__main__":
                         choices=["cross_entropy", "ordinal"],
                         help="Loss function for final test evaluation only")
     # ── CMA-ES hyperparameters ───────────────────────────────────────────
-    parser.add_argument("--n_gen",   type=int,   default=1,  help="max generations")
-    parser.add_argument("--sigma",   type=float, default=0.02, help="initial step size (sigma0)")
+    parser.add_argument("--n_gen",   type=int,   default=20,  help="max generations")
+    parser.add_argument("--sigma",   type=float, default=0.01, help="initial step size (sigma0)")
     parser.add_argument("--popsize", type=int,   default=None,
                         help="CMA population size; None = auto (4 + 3*ln(n_params))")
     parser.add_argument("--acc_gap_tol", type=float, default=0.01,
