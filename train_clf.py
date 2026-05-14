@@ -75,11 +75,11 @@ class BatteryRULClassifier(nn.Module):
         super().__init__()
 
         self.cnn = nn.Sequential(
-            nn.Conv1d(1, 16, kernel_size=5, padding=2), nn.BatchNorm1d(16),  nn.GELU(), nn.Dropout(dropout),
+            nn.Conv1d(1, 16, kernel_size=5, padding=2), nn.BatchNorm1d(16),  nn.ELU(), nn.Dropout(dropout),
             nn.MaxPool1d(2),
-            nn.Conv1d(16, 32, kernel_size=5, padding=2), nn.BatchNorm1d(32), nn.GELU(), nn.Dropout(dropout),
+            nn.Conv1d(16, 32, kernel_size=5, padding=2), nn.BatchNorm1d(32), nn.ELU(), nn.Dropout(dropout),
             nn.MaxPool1d(2),
-            nn.Conv1d(32, cnn_dim, kernel_size=5, padding=2), nn.BatchNorm1d(cnn_dim), nn.GELU(), nn.Dropout(dropout),
+            nn.Conv1d(32, cnn_dim, kernel_size=5, padding=2), nn.BatchNorm1d(cnn_dim), nn.ELU(), nn.Dropout(dropout),
             nn.AdaptiveAvgPool1d(1),
         )
 
