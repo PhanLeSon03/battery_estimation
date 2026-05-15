@@ -426,7 +426,7 @@ def extract_pkl(path: Path, data_dir: Path, out_dir: Path, labels: dict[str, int
         dqdv_curve = _interp_nan(dqdv_curve)
 
         Qd.append(float(np.nanmax(dq_raw)) if dq_raw.size else 0.0)
-        Qc.append(float(np.nanmax(cq_raw)) if dq_raw.size else 0.0)
+        Qc.append(float(np.nanmax(cq_raw)) if cq_raw.size else 0.0)
         c_t.append(charge_time[-1])
 #         print(f'charge_time: {charge_time[-1]}')
 #         print(f'discharge_time: {discharge_time[-1]}')
