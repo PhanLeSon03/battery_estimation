@@ -4,60 +4,6 @@ Logging to: ./checkpoints/ISU\Info_log.txt
 Loading BML data...
 Loading BML .npz feature files...
   Loaded 240 BML cells
-TrainCellName = ['ISU-ILCC_G17C1', 'ISU-ILCC_G54C3', 'ISU-ILCC_G56C2', 'ISU-ILCC_G35C1',
-                 'ISU-ILCC_G3C4', 'ISU-ILCC_G1C2', 'ISU-ILCC_G13C1', 'ISU-ILCC_G18C1',
-                 'ISU-ILCC_G58C3', 'ISU-ILCC_G61C2', 'ISU-ILCC_G63C4', 'ISU-ILCC_G49C2',
-                 'ISU-ILCC_G34C4', 'ISU-ILCC_G46C4', 'ISU-ILCC_G18C2', 'ISU-ILCC_G8C4',
-                 'ISU-ILCC_G19C2', 'ISU-ILCC_G13C2', 'ISU-ILCC_G36C3', 'ISU-ILCC_G41C2',
-                 'ISU-ILCC_G47C3', 'ISU-ILCC_G53C1', 'ISU-ILCC_G12C1', 'ISU-ILCC_G33C2',
-                 'ISU-ILCC_G29C1', 'ISU-ILCC_G39C2', 'ISU-ILCC_G2C2', 'ISU-ILCC_G52C2',
-                 'ISU-ILCC_G6C2', 'ISU-ILCC_G33C3', 'ISU-ILCC_G45C1', 'ISU-ILCC_G32C2',
-                 'ISU-ILCC_G18C4', 'ISU-ILCC_G52C4', 'ISU-ILCC_G25C1', 'ISU-ILCC_G43C2',
-                 'ISU-ILCC_G10C3', 'ISU-ILCC_G1C1', 'ISU-ILCC_G29C2', 'ISU-ILCC_G35C4',
-                 'ISU-ILCC_G63C2', 'ISU-ILCC_G42C2', 'ISU-ILCC_G4C2', 'ISU-ILCC_G24C4',
-                 'ISU-ILCC_G28C4', 'ISU-ILCC_G24C1', 'ISU-ILCC_G50C1', 'ISU-ILCC_G32C4',
-                 'ISU-ILCC_G19C1', 'ISU-ILCC_G55C4', 'ISU-ILCC_G31C3', 'ISU-ILCC_G14C1',
-                 'ISU-ILCC_G7C4', 'ISU-ILCC_G47C4', 'ISU-ILCC_G8C1', 'ISU-ILCC_G10C1',
-                 'ISU-ILCC_G8C2', 'ISU-ILCC_G34C1', 'ISU-ILCC_G4C4', 'ISU-ILCC_G27C4',
-                 'ISU-ILCC_G41C4', 'ISU-ILCC_G31C4', 'ISU-ILCC_G47C1', 'ISU-ILCC_G20C4',
-                 'ISU-ILCC_G59C3', 'ISU-ILCC_G48C3', 'ISU-ILCC_G59C1', 'ISU-ILCC_G6C1',
-                 'ISU-ILCC_G14C2', 'ISU-ILCC_G59C4', 'ISU-ILCC_G43C4', 'ISU-ILCC_G46C3',
-                 'ISU-ILCC_G34C2', 'ISU-ILCC_G4C1', 'ISU-ILCC_G12C2', 'ISU-ILCC_G32C3',
-                 'ISU-ILCC_G27C1', 'ISU-ILCC_G23C1', 'ISU-ILCC_G61C3', 'ISU-ILCC_G47C2',
-                 'ISU-ILCC_G48C1', 'ISU-ILCC_G58C4', 'ISU-ILCC_G56C4', 'ISU-ILCC_G7C2',
-                 'ISU-ILCC_G30C4', 'ISU-ILCC_G9C2', 'ISU-ILCC_G40C1', 'ISU-ILCC_G60C1',
-                 'ISU-ILCC_G39C4', 'ISU-ILCC_G32C1', 'ISU-ILCC_G41C1', 'ISU-ILCC_G22C2',
-                 'ISU-ILCC_G37C1', 'ISU-ILCC_G33C4', 'ISU-ILCC_G16C3', 'ISU-ILCC_G51C3',
-                 'ISU-ILCC_G33C1', 'ISU-ILCC_G56C1', 'ISU-ILCC_G39C1', 'ISU-ILCC_G2C3',
-                 'ISU-ILCC_G49C3', 'ISU-ILCC_G17C2', 'ISU-ILCC_G34C3', 'ISU-ILCC_G59C2',
-                 'ISU-ILCC_G28C3', 'ISU-ILCC_G62C4', 'ISU-ILCC_G36C1', 'ISU-ILCC_G2C1',
-                 'ISU-ILCC_G57C3', 'ISU-ILCC_G54C2', 'ISU-ILCC_G49C1', 'ISU-ILCC_G41C3',
-                 'ISU-ILCC_G64C4', 'ISU-ILCC_G3C3', 'ISU-ILCC_G2C4', 'ISU-ILCC_G50C4',
-                 'ISU-ILCC_G13C3', 'ISU-ILCC_G3C2', 'ISU-ILCC_G60C2', 'ISU-ILCC_G49C4',
-                 'ISU-ILCC_G28C1', 'ISU-ILCC_G10C2', 'ISU-ILCC_G21C3', 'ISU-ILCC_G40C4',
-                 'ISU-ILCC_G16C2', 'ISU-ILCC_G51C2', 'ISU-ILCC_G64C1', 'ISU-ILCC_G24C2',
-                 'ISU-ILCC_G30C2', 'ISU-ILCC_G57C2', 'ISU-ILCC_G21C1', 'ISU-ILCC_G29C3',
-                 'ISU-ILCC_G61C4', 'ISU-ILCC_G42C3', 'ISU-ILCC_G55C3', 'ISU-ILCC_G37C3',
-                 'ISU-ILCC_G56C3', 'ISU-ILCC_G13C4', 'ISU-ILCC_G46C1', 'ISU-ILCC_G21C4',
-                 'ISU-ILCC_G60C4', 'ISU-ILCC_G4C3', 'ISU-ILCC_G27C3', 'ISU-ILCC_G25C2',
-                 'ISU-ILCC_G9C1', 'ISU-ILCC_G17C4', 'ISU-ILCC_G50C3', 'ISU-ILCC_G5C3',
-                 'ISU-ILCC_G14C4', 'ISU-ILCC_G53C3', 'ISU-ILCC_G27C2', 'ISU-ILCC_G38C3',
-                 'ISU-ILCC_G44C4', 'ISU-ILCC_G57C1', 'ISU-ILCC_G19C4', 'ISU-ILCC_G60C3',
-                 'ISU-ILCC_G16C1', 'ISU-ILCC_G22C1', 'ISU-ILCC_G64C3', 'ISU-ILCC_G63C3',
-                 'ISU-ILCC_G58C2', 'ISU-ILCC_G1C3', 'ISU-ILCC_G19C3', 'ISU-ILCC_G25C3',
-                 'ISU-ILCC_G5C1', 'ISU-ILCC_G1C4', 'ISU-ILCC_G30C3', 'ISU-ILCC_G55C1',
-                 'ISU-ILCC_G23C2', 'ISU-ILCC_G12C3', 'ISU-ILCC_G36C4', 'ISU-ILCC_G53C2',
-                 'ISU-ILCC_G45C2', 'ISU-ILCC_G64C2', 'ISU-ILCC_G21C2', 'ISU-ILCC_G38C4',
-                 'ISU-ILCC_G17C3', 'ISU-ILCC_G16C4', 'ISU-ILCC_G50C2', 'ISU-ILCC_G28C2',
-                 'ISU-ILCC_G22C4', 'ISU-ILCC_G39C3', 'ISU-ILCC_G45C3', 'ISU-ILCC_G54C4',
-                 'ISU-ILCC_G14C3', 'ISU-ILCC_G45C4', 'ISU-ILCC_G58C1', 'ISU-ILCC_G20C1',
-                 'ISU-ILCC_G35C3', 'ISU-ILCC_G57C4', 'ISU-ILCC_G5C4', 'ISU-ILCC_G44C3']
-ValCellName = ['ISU-ILCC_G8C3', 'ISU-ILCC_G38C1', 'ISU-ILCC_G44C2', 'ISU-ILCC_G29C4',
-               'ISU-ILCC_G37C4', 'ISU-ILCC_G10C4', 'ISU-ILCC_G44C1', 'ISU-ILCC_G35C2',
-               'ISU-ILCC_G6C3', 'ISU-ILCC_G48C4', 'ISU-ILCC_G23C4', 'ISU-ILCC_G30C1',
-               'ISU-ILCC_G20C3', 'ISU-ILCC_G37C2', 'ISU-ILCC_G63C1', 'ISU-ILCC_G3C1',
-               'ISU-ILCC_G51C1', 'ISU-ILCC_G7C1', 'ISU-ILCC_G22C3', 'ISU-ILCC_G42C1',
-               'ISU-ILCC_G31C1', 'ISU-ILCC_G46C2', 'ISU-ILCC_G24C3', 'ISU-ILCC_G52C1']
 TestCellName = ['ISU-ILCC_G53C4', 'ISU-ILCC_G48C2', 'ISU-ILCC_G40C2', 'ISU-ILCC_G6C4',
                 'ISU-ILCC_G23C3', 'ISU-ILCC_G5C2', 'ISU-ILCC_G12C4', 'ISU-ILCC_G31C2',
                 'ISU-ILCC_G51C4', 'ISU-ILCC_G43C3', 'ISU-ILCC_G62C1', 'ISU-ILCC_G9C3',
@@ -66,54 +12,54 @@ TestCellName = ['ISU-ILCC_G53C4', 'ISU-ILCC_G48C2', 'ISU-ILCC_G40C2', 'ISU-ILCC_
                 'ISU-ILCC_G62C3', 'ISU-ILCC_G36C2', 'ISU-ILCC_G7C3', 'ISU-ILCC_G18C3']
 Split — Train: 192  Val: 24   Test: 24
 Building train dataset...
-  Total index entries: 71680
-  Class 0: 14336 samples
-  Class 1: 14336 samples
-  Class 2: 14336 samples
-  Class 3: 14336 samples
-  Class 4: 14336 samples
+  Total index entries: 74355
+  Class 0: 14871 samples
+  Class 1: 14871 samples
+  Class 2: 14871 samples
+  Class 3: 14871 samples
+  Class 4: 14871 samples
   Fitting scalers on subset...
   Scalers fitted.
 Building val dataset...
-  Total index entries: 7160
-  Class 0: 1432 samples
-  Class 1: 1432 samples
-  Class 2: 1432 samples
-  Class 3: 1432 samples
-  Class 4: 1432 samples
+  Total index entries: 7545
+  Class 0: 1509 samples
+  Class 1: 1509 samples
+  Class 2: 1509 samples
+  Class 3: 1509 samples
+  Class 4: 1509 samples
 Building test dataset...
-  Total index entries: 8870
-  Class 0: 1774 samples
-  Class 1: 1774 samples
-  Class 2: 1774 samples
-  Class 3: 1774 samples
-  Class 4: 1774 samples
-summary_feats: 16
-Model parameters: 48,421
+  Total index entries: 9030
+  Class 0: 1806 samples
+  Class 1: 1806 samples
+  Class 2: 1806 samples
+  Class 3: 1806 samples
+  Class 4: 1806 samples
+summary_feats: 12
+Model parameters: 48,293
 
 Model Summary:
 ================================================================================
   Layer                                  Output Shape                  Params
 --------------------------------------------------------------------------------
-  Conv1d                                 (32, 16, 1000)                    96
-  BatchNorm1d                            (32, 16, 1000)                    32
-  GELU                                   (32, 16, 1000)                     0
-  Dropout                                (32, 16, 1000)                     0
-  MaxPool1d                              (32, 16, 500)                      0
-  Conv1d                                 (32, 32, 500)                  2,592
-  BatchNorm1d                            (32, 32, 500)                     64
-  GELU                                   (32, 32, 500)                      0
-  Dropout                                (32, 32, 500)                      0
-  MaxPool1d                              (32, 32, 250)                      0
-  Conv1d                                 (32, 32, 250)                  5,152
-  BatchNorm1d                            (32, 32, 250)                     64
-  GELU                                   (32, 32, 250)                      0
-  Dropout                                (32, 32, 250)                      0
-  AdaptiveAvgPool1d                      (32, 32, 1)                        0
-  Linear                                 (1, 32, 32)                      544
-  ELU                                    (1, 32, 32)                        0
-  Dropout                                (1, 32, 32)                        0
-  Dropout                                (1, 32, 64)                        0
+  Conv1d                                 (16, 16, 1000)                    96
+  BatchNorm1d                            (16, 16, 1000)                    32
+  ELU                                    (16, 16, 1000)                     0
+  Dropout                                (16, 16, 1000)                     0
+  MaxPool1d                              (16, 16, 500)                      0
+  Conv1d                                 (16, 32, 500)                  2,592
+  BatchNorm1d                            (16, 32, 500)                     64
+  ELU                                    (16, 32, 500)                      0
+  Dropout                                (16, 32, 500)                      0
+  MaxPool1d                              (16, 32, 250)                      0
+  Conv1d                                 (16, 32, 250)                  5,152
+  BatchNorm1d                            (16, 32, 250)                     64
+  ELU                                    (16, 32, 250)                      0
+  Dropout                                (16, 32, 250)                      0
+  AdaptiveAvgPool1d                      (16, 32, 1)                        0
+  Linear                                 (1, 16, 32)                      416
+  ELU                                    (1, 16, 32)                        0
+  Dropout                                (1, 16, 32)                        0
+  Dropout                                (1, 16, 64)                        0
   GRU                                    ?                             37,632
   Dropout                                (1, 64)                            0
   Linear                                 (1, 32)                        2,080
@@ -121,86 +67,86 @@ Model Summary:
   Dropout                                (1, 32)                            0
   Linear                                 (1, 5)                           165
 ================================================================================
-  Total trainable parameters                                           48,421
+  Total trainable parameters                                           48,293
 ================================================================================
 
 Loss: OrdinalLoss
 
 Epoch |   TrLoss |   TrAcc |   VaLoss |   VaAcc |       LR
 ----------------------------------------------------------
-    1 |   1.2302 |  0.5311 |   1.3729 |  0.5092 | 1.00e-03
-    2 |   0.9211 |  0.6285 |   1.6861 |  0.4628 | 1.00e-03
-    3 |   0.7171 |  0.7023 |   2.3542 |  0.4485 | 1.00e-03
-    4 |   0.5975 |  0.7515 |   3.1361 |  0.4267 | 1.00e-03
-    5 |   0.5253 |  0.7826 |   3.3709 |  0.4549 | 1.00e-03
-    6 |   0.4764 |  0.8033 |   3.5565 |  0.4344 | 1.00e-03
-    7 |   0.4447 |  0.8156 |   4.3208 |  0.4237 | 1.00e-03
-    8 |   0.4189 |  0.8277 |   4.8635 |  0.4246 | 5.00e-04
-    9 |   0.3483 |  0.8568 |   5.0662 |  0.4391 | 5.00e-04
-   10 |   0.3307 |  0.8635 |   5.2582 |  0.4251 | 5.00e-04
-   11 |   0.3191 |  0.8693 |   5.8059 |  0.4297 | 5.00e-04
-   12 |   0.3073 |  0.8742 |   6.0645 |  0.4302 | 5.00e-04
-   13 |   0.2960 |  0.8791 |   5.8914 |  0.4302 | 5.00e-04
-   14 |   0.2931 |  0.8812 |   5.8963 |  0.4432 | 5.00e-04
-   15 |   0.2838 |  0.8845 |   7.0815 |  0.3940 | 2.50e-04
-   16 |   0.2513 |  0.8982 |   6.3114 |  0.4337 | 2.50e-04
-   17 |   0.2421 |  0.9036 |   6.6373 |  0.4270 | 2.50e-04
-   18 |   0.2414 |  0.9028 |   6.7268 |  0.4408 | 2.50e-04
-   19 |   0.2389 |  0.9031 |   6.9469 |  0.4256 | 2.50e-04
-   20 |   0.2320 |  0.9069 |   6.4956 |  0.4226 | 2.50e-04
-   21 |   0.2342 |  0.9058 |   6.8340 |  0.4383 | 2.50e-04
-   22 |   0.2269 |  0.9094 |   6.7593 |  0.4501 | 1.25e-04
-   23 |   0.2101 |  0.9147 |   7.0386 |  0.4295 | 1.25e-04
-   24 |   0.2066 |  0.9181 |   7.0507 |  0.4265 | 1.25e-04
-   25 |   0.2067 |  0.9178 |   7.1742 |  0.4264 | 1.25e-04
-   26 |   0.2032 |  0.9181 |   6.9172 |  0.4411 | 1.25e-04
-   27 |   0.2047 |  0.9173 |   7.2783 |  0.4279 | 1.25e-04
-   28 |   0.2030 |  0.9182 |   7.1040 |  0.4310 | 1.25e-04
-   29 |   0.2013 |  0.9197 |   7.2055 |  0.4342 | 6.25e-05
-   30 |   0.1929 |  0.9229 |   7.2912 |  0.4272 | 6.25e-05
-   31 |   0.1956 |  0.9222 |   7.6279 |  0.3911 | 6.25e-05
-   32 |   0.1913 |  0.9241 |   7.4550 |  0.4214 | 6.25e-05
-   33 |   0.1870 |  0.9252 |   7.6403 |  0.4015 | 6.25e-05
-   34 |   0.1873 |  0.9258 |   7.6844 |  0.3948 | 6.25e-05
-   35 |   0.1847 |  0.9270 |   7.3002 |  0.4310 | 6.25e-05
-   36 |   0.1870 |  0.9269 |   7.3061 |  0.4325 | 3.13e-05
-   37 |   0.1827 |  0.9277 |   7.4411 |  0.4300 | 3.13e-05
-   38 |   0.1778 |  0.9298 |   7.4155 |  0.4313 | 3.13e-05
-   39 |   0.1808 |  0.9286 |   7.5645 |  0.4240 | 3.13e-05
-   40 |   0.1837 |  0.9271 |   7.4401 |  0.4284 | 3.13e-05
-   41 |   0.1827 |  0.9283 |   7.4432 |  0.4250 | 3.13e-05
-   42 |   0.1809 |  0.9266 |   7.6783 |  0.3994 | 3.13e-05
-   43 |   0.1768 |  0.9300 |   7.7366 |  0.4126 | 1.56e-05
-   44 |   0.1747 |  0.9306 |   7.5141 |  0.4258 | 1.56e-05
-   45 |   0.1814 |  0.9277 |   7.5758 |  0.4264 | 1.56e-05
-   46 |   0.1806 |  0.9288 |   7.8642 |  0.3895 | 1.56e-05
-   47 |   0.1766 |  0.9303 |   7.4458 |  0.4307 | 1.56e-05
-   48 |   0.1791 |  0.9283 |   7.5366 |  0.4338 | 1.56e-05
-   49 |   0.1751 |  0.9304 |   7.4858 |  0.4306 | 1.56e-05
-   50 |   0.1786 |  0.9289 |   7.6288 |  0.4218 | 1.00e-05
+    1 |   1.2269 |  0.5342 |   1.8572 |  0.3765 | 1.00e-03
+    2 |   0.9788 |  0.6142 |   1.5954 |  0.4766 | 1.00e-03
+    3 |   0.8213 |  0.6661 |   2.6149 |  0.4517 | 1.00e-03
+    4 |   0.7443 |  0.6973 |   2.0766 |  0.4807 | 1.00e-03
+    5 |   0.6792 |  0.7208 |   2.8993 |  0.4569 | 1.00e-03
+    6 |   0.6309 |  0.7397 |   2.5167 |  0.4732 | 1.00e-03
+    7 |   0.5880 |  0.7543 |   3.0344 |  0.4606 | 1.00e-03
+    8 |   0.5528 |  0.7673 |   4.1247 |  0.4192 | 1.00e-03
+    9 |   0.5339 |  0.7767 |   3.7144 |  0.4146 | 1.00e-03
+   10 |   0.5143 |  0.7852 |   3.4328 |  0.4477 | 1.00e-03
+   11 |   0.4952 |  0.7934 |   3.9363 |  0.4000 | 5.00e-04
+   12 |   0.4369 |  0.8181 |   4.0743 |  0.3911 | 5.00e-04
+   13 |   0.4227 |  0.8215 |   5.3963 |  0.4037 | 5.00e-04
+   14 |   0.4176 |  0.8264 |   4.8838 |  0.3874 | 5.00e-04
+   15 |   0.4079 |  0.8287 |   5.0507 |  0.4061 | 5.00e-04
+   16 |   0.4027 |  0.8326 |   5.1844 |  0.3844 | 5.00e-04
+   17 |   0.3946 |  0.8348 |   4.9098 |  0.3724 | 5.00e-04
+   18 |   0.3873 |  0.8380 |   4.9705 |  0.3759 | 2.50e-04
+   19 |   0.3552 |  0.8507 |   5.5214 |  0.3730 | 2.50e-04
+   20 |   0.3549 |  0.8509 |   5.0731 |  0.3675 | 2.50e-04
+   21 |   0.3468 |  0.8538 |   5.2637 |  0.3682 | 2.50e-04
+   22 |   0.3449 |  0.8559 |   6.1941 |  0.3553 | 2.50e-04
+   23 |   0.3417 |  0.8583 |   5.6428 |  0.3613 | 2.50e-04
+   24 |   0.3439 |  0.8550 |   5.3944 |  0.3708 | 2.50e-04
+   25 |   0.3370 |  0.8591 |   6.1509 |  0.3760 | 1.25e-04
+   26 |   0.3265 |  0.8637 |   5.6711 |  0.3712 | 1.25e-04
+   27 |   0.3212 |  0.8668 |   5.8237 |  0.3604 | 1.25e-04
+   28 |   0.3215 |  0.8672 |   6.2603 |  0.3547 | 1.25e-04
+   29 |   0.3174 |  0.8673 |   6.3722 |  0.3639 | 1.25e-04
+   30 |   0.3167 |  0.8671 |   6.1588 |  0.3617 | 1.25e-04
+   31 |   0.3152 |  0.8681 |   5.9976 |  0.3569 | 1.25e-04
+   32 |   0.3138 |  0.8701 |   6.0833 |  0.3597 | 6.25e-05
+   33 |   0.3023 |  0.8731 |   6.1943 |  0.3539 | 6.25e-05
+   34 |   0.3031 |  0.8723 |   6.0182 |  0.3555 | 6.25e-05
+   35 |   0.3034 |  0.8746 |   5.9337 |  0.3568 | 6.25e-05
+   36 |   0.3044 |  0.8727 |   5.8753 |  0.3571 | 6.25e-05
+   37 |   0.3022 |  0.8755 |   6.0445 |  0.3561 | 6.25e-05
+   38 |   0.3066 |  0.8720 |   6.9470 |  0.3928 | 6.25e-05
+   39 |   0.3041 |  0.8736 |   6.1428 |  0.3541 | 3.13e-05
+   40 |   0.2959 |  0.8770 |   6.2497 |  0.3478 | 3.13e-05
+   41 |   0.2973 |  0.8767 |   6.2689 |  0.3571 | 3.13e-05
+   42 |   0.2932 |  0.8785 |   6.1813 |  0.3523 | 3.13e-05
+   43 |   0.2957 |  0.8770 |   6.1205 |  0.3520 | 3.13e-05
+   44 |   0.2949 |  0.8785 |   6.1998 |  0.3528 | 3.13e-05
+   45 |   0.2951 |  0.8757 |   6.1127 |  0.3573 | 3.13e-05
+   46 |   0.2939 |  0.8779 |   6.7189 |  0.3561 | 1.56e-05
+   47 |   0.2985 |  0.8763 |   6.4863 |  0.3573 | 1.56e-05
+   48 |   0.2932 |  0.8769 |   6.1494 |  0.3569 | 1.56e-05
+   49 |   0.2927 |  0.8769 |   6.4555 |  0.3571 | 1.56e-05
+   50 |   0.2976 |  0.8755 |   6.7190 |  0.3594 | 1.56e-05
 
 ============================================================
 
-Test Loss: 1.5001  Accuracy: 0.4725
+Test Loss: 1.2594  Accuracy: 0.5470
 
 Classification Report:
               precision    recall  f1-score   support
 
-     RUL>400       0.63      0.88      0.74      1774
-     RUL>300       0.43      0.50      0.46      1774
-     RUL>200       0.35      0.29      0.32      1774
-     RUL>100       0.32      0.37      0.35      1774
-     RUL<100       0.66      0.32      0.44      1774
+     RUL>400       0.84      0.73      0.78      1806
+     RUL>300       0.54      0.44      0.48      1806
+     RUL>200       0.38      0.47      0.42      1806
+     RUL>100       0.38      0.46      0.42      1806
+     RUL<100       0.72      0.64      0.67      1806
 
-    accuracy                           0.47      8870
-   macro avg       0.48      0.47      0.46      8870
-weighted avg       0.48      0.47      0.46      8870
+    accuracy                           0.55      9030
+   macro avg       0.57      0.55      0.56      9030
+weighted avg       0.57      0.55      0.56      9030
 
 Confusion Matrix:
-[[1558  199    2    6    9]
- [ 593  884  146  135   16]
- [ 241  630  510  342   51]
- [  67  314  514  663  216]
- [   0    8  278  912  576]]
+[[1319  435   37    5   10]
+ [ 162  791  773   80    0]
+ [  60  164  857  705   20]
+ [  38   46  478  825  419]
+ [   0   39   92  528 1147]]
 
 Saved to ./checkpoints/ISU/
