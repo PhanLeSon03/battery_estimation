@@ -554,12 +554,12 @@ def main() -> None:
     failed = 0
     for i, path in enumerate(files, start=1):
         print(f"[{i}/{len(files)}] {path}")
-        try:
-            if extract_pkl(path, data_dir, out_dir, labels):
-                saved += 1
-        except Exception as exc:
-            failed += 1
-            print(f"  WARNING: failed {path}: {exc}")
+        # try:
+        if extract_pkl(path, data_dir, out_dir, labels):
+            saved += 1
+        # except Exception as exc:
+        #     failed += 1
+        #     print(f"  WARNING: failed {path}: {exc}")
 
     print(f"\nDone. Saved: {saved}  Failed: {failed}  Output: {out_dir}")
 
