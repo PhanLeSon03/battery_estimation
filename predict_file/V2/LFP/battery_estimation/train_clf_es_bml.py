@@ -1,0 +1,526 @@
+"""
+train_clf_es_bml.py — Train CNN+GRU classifier for battery RUL using CMA-ES
+                       on BatteryML dataset (no backprop, no optimizer)
+
+Classes:
+    0: RUL > 400
+    1: RUL 300–400
+    2: RUL 200–300
+    3: RUL 100–200
+    4: RUL < 100
+
+ES strategy: CMA-ES (Covariance Matrix Adaptation Evolution Strategy)
+    - adapts full covariance of the search distribution each generation
+    - requires: pip install cma
+
+Usage:
+    python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml
+    python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml --pretrain_ckpt checkpoints_bml/best_clf.pt
+    
+    python train_clf_es_bml.py --content_dir ./content_bml/MATR --output_dir ./checkpoints_clf_bml_MATR_es --pretrain_ckpt checkpoints_clf_bml_MATR/best_clf_bml.pt
+"""
+
+import os
+import argparse
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from sklearn.metrics import classification_report, confusion_matrix
+import cma   # pip install cma
+
+from dataset_clf_bml import build_clf_dataloaders, N_CLASSES, N_INPUT, V_BINS  # BML dataset
+import joblib
+from torch.utils.data import DataLoader
+
+
+# -------------------------------------------------------------------------
+# Reproducibility
+# -------------------------------------------------------------------------
+def set_seed(seed: int = 42):
+    import random
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark     = False
+
+
+class OrdinalLoss(nn.Module):
+    """
+    Takes raw logits (B, 5) — same as CrossEntropyLoss.
+    Converts to cumulative probabilities internally using softmax.
+
+    P(y > k) = sum_{j=k+1}^{K-1} softmax(logits)_j
+    """
+    def __init__(self, n_classes: int = 5, reduction: str = 'mean'):
+        super().__init__()
+        self.K         = n_classes
+        self.reduction = reduction
+
+    def forward(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        probs = torch.softmax(logits, dim=1)                          # (B, 5)
+        cum   = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]             # (B, K-1)
+        thresholds = torch.arange(self.K - 1, device=targets.device)
+        labels     = (targets.unsqueeze(1) > thresholds).float()     # (B, K-1)
+        loss = F.binary_cross_entropy(cum.clamp(1e-7, 1 - 1e-7), labels, reduction='none')
+        loss = loss.sum(dim=1)
+        return loss.mean() if self.reduction == 'mean' else loss.sum()
+
+
+def predict_cls(logits: torch.Tensor) -> torch.Tensor:
+    probs = torch.softmax(logits, dim=-1)
+    return probs.argmax(dim=-1)
+
+def ordinal_predict(logits: torch.Tensor) -> torch.Tensor:
+    probs = torch.softmax(logits, dim=1)
+    cum   = 1.0 - torch.cumsum(probs, dim=1)[:, :-1]   # (B, 4)
+    return (cum > 0.5).sum(dim=1).long()                # (B,)
+
+
+# -------------------------------------------------------------------------
+# Per-channel 1D CNN — separate filters for each input channel
+
+
+# -------------------------------------------------------------------------
+# Model — identical to train_clf_es.py
+# -------------------------------------------------------------------------
+class BatteryRULClassifier(nn.Module):
+    def __init__(
+        self,
+        cnn_dim:       int   = 32,
+        gru_dim:       int   = 32,
+        gru_layers:    int   = 2,
+        summary_feats: int   = 14,     # BML: 10 scalars + 4 PE (vs MIT 14 = 10 + 4)
+        n_classes:     int   = N_CLASSES,
+        dropout:       float = 0.0,    # dropout off during ES eval (deterministic fitness)
+    ):
+        super().__init__()
+
+        self.cnn = nn.Sequential(
+            nn.Conv1d(1, 16, kernel_size=5, padding=2), nn.BatchNorm1d(16),  nn.GELU(), nn.Dropout(dropout),
+            nn.MaxPool1d(2),
+            nn.Conv1d(16, 32, kernel_size=5, padding=2), nn.BatchNorm1d(32), nn.GELU(), nn.Dropout(dropout),
+            nn.MaxPool1d(2),
+            nn.Conv1d(32, cnn_dim, kernel_size=5, padding=2), nn.BatchNorm1d(cnn_dim), nn.GELU(), nn.Dropout(dropout),
+            nn.AdaptiveAvgPool1d(1),
+        )
+
+        self.summary_proj = nn.Sequential(
+            nn.Linear(summary_feats, cnn_dim),
+            nn.ELU(),
+            nn.Dropout(dropout),
+        )
+
+        self.gru = nn.GRU(
+            input_size    = cnn_dim + cnn_dim,      # cnn_dim (cnn out) + cnn_dim (summary proj out)
+            hidden_size   = gru_dim,
+            num_layers    = gru_layers,
+            batch_first   = True,
+            bidirectional = True,
+            dropout       = dropout if gru_layers > 1 else 0.0,
+        )
+
+        self.post_gru_drop = nn.Dropout(dropout)
+
+        self.head = nn.Sequential(
+            nn.Linear(gru_dim * 2, 32), nn.ELU(), nn.Dropout(dropout),
+            nn.Linear(32, n_classes),
+        )
+
+    def forward(self, dq: torch.Tensor, summary: torch.Tensor) -> torch.Tensor:
+        B, T, C, F = dq.shape
+
+        dq_feat      = self.cnn(dq.reshape(B * T, C, F)).squeeze(-1).reshape(B, T, -1)
+        summary_feat = self.summary_proj(summary)
+
+        fused    = self.post_gru_drop(torch.cat([dq_feat, summary_feat], dim=-1))
+        out, h_n = self.gru(fused)
+        h_last   = self.post_gru_drop(torch.cat([h_n[-2], h_n[-1]], dim=-1))
+
+        return self.head(h_last)
+
+
+# -------------------------------------------------------------------------
+# Parameter helpers — flatten / unflatten model weights
+# ES only optimizes GRU + head; CNN and summary_proj are frozen (gradient-trained)
+# -------------------------------------------------------------------------
+_ES_MODULES = ("cnn", "summary_proj" ,"gru", "post_gru_drop", "head")   # modules optimized by ES
+
+
+def get_flat_params(model: nn.Module) -> np.ndarray:
+    """Flatten GRU + head parameters into a single 1-D numpy array."""
+    return np.concatenate([
+        p.data.cpu().numpy().ravel()
+        for name, p in model.named_parameters()
+        if any(name.startswith(m) for m in _ES_MODULES)
+    ])
+
+
+def set_flat_params(model: nn.Module, flat: np.ndarray) -> None:
+    """Load a flat numpy array back into GRU + head parameters in-place."""
+    offset = 0
+    for name, p in model.named_parameters():
+        if not any(name.startswith(m) for m in _ES_MODULES):
+            continue
+        size = p.numel()
+        p.data.copy_(
+            torch.tensor(
+                flat[offset: offset + size].reshape(p.shape),
+                dtype=p.dtype,
+            )
+        )
+        offset += size
+
+
+def _make_subset_loader(loader, max_batches: int = 1000) -> DataLoader:
+    """Return a new DataLoader sampling max_batches worth of random indices."""
+    dataset = loader.dataset
+    n       = min(max_batches * loader.batch_size, len(dataset))
+    idx     = np.random.choice(len(dataset), size=n, replace=False)
+    subset  = torch.utils.data.Subset(dataset, idx)
+    return DataLoader(subset,
+                      batch_size  = loader.batch_size,
+                      shuffle     = False,
+                      num_workers = 0,
+                      pin_memory  = loader.pin_memory)
+# -------------------------------------------------------------------------
+# Fitness function — accuracy on one pass through loader
+# -------------------------------------------------------------------------
+@torch.no_grad()
+def fitness(model: nn.Module, loader, device: torch.device) -> float:
+    """Return accuracy (higher = better) over the full loader."""
+    model.eval()
+    correct = 0
+    total   = 0
+    
+    for batch in loader:
+        dq      = batch["dq"].to(device)
+        summary = batch["summary"].to(device)
+        labels  = batch["label"].to(device)
+        logits  = model(dq, summary)
+        correct += (logits.argmax(dim=1) == labels).sum().item()
+        total   += len(labels)
+    return correct / total
+
+
+# -------------------------------------------------------------------------
+# Evaluate — loss + acc + predictions (for final report)
+# -------------------------------------------------------------------------
+@torch.no_grad()
+def evaluate(model: nn.Module, loader, criterion, pred_fn, device: torch.device):
+    model.eval()
+    total_loss = 0.0
+    all_pred   = []
+    all_true   = []
+    for batch in loader:
+        dq      = batch["dq"].to(device)
+        summary = batch["summary"].to(device)
+        labels  = batch["label"].to(device)
+        out     = model(dq, summary)
+        loss    = criterion(out, labels)
+        total_loss += loss.item() * len(labels)
+        all_pred.extend(pred_fn(out).cpu().numpy())
+        all_true.extend(labels.cpu().numpy())
+    all_pred = np.array(all_pred)
+    all_true = np.array(all_true)
+    return total_loss / len(all_true), (all_pred == all_true).mean(), all_pred, all_true
+
+
+# -------------------------------------------------------------------------
+# CMA-ES training loop
+# -------------------------------------------------------------------------
+def cmaes_train(
+    model:       nn.Module,
+    train_loader,
+    val_loader,
+    test_loader,
+    device:      torch.device,
+    n_gen:       int   = 200,    # max generations
+    sigma:       float = 0.02,   # initial step size (std of search distribution)
+    popsize:     int   = None,   # CMA population size; None = auto (4 + 3*ln(n))
+    output_dir:  str   = ".",
+    seed:        int   = 42,
+    acc_gap_tol: float = 0.01,   # stop when |train_acc - val_acc| <= this threshold
+    acc_min:     float = 0.70,   # only trigger gap stop if val_acc is above this floor
+):
+    """
+    CMA-ES training loop.
+
+    CMA-ES adapts the full covariance matrix of the search distribution
+    each generation, allowing it to learn correlations between parameters
+    and scale the search appropriately per direction — far more efficient
+    than isotropic (1+lambda)-ES for high-dimensional spaces.
+
+    CMA minimizes, so we pass -accuracy as the objective.
+
+    Key CMA-ES internals (handled by the `cma` library):
+        - rank-mu update:  covariance update using all offspring weighted by rank
+        - rank-one update: covariance update from cumulative evolution path
+        - step size control: CSA (cumulative step size adaptation)
+        - termination: stagnation, flat fitness, condition number, etc.
+    """
+    # initialise from current model weights — CMA works in float64
+    x0       = get_flat_params(model).astype(np.float64)
+    n_params = len(x0)
+    n_total  = sum(p.numel() for p in model.parameters())
+
+    # evaluate initial params
+    best_acc  = fitness(model, train_loader,   device)
+    val_acc = fitness(model, val_loader, device)
+    print(f"ES optimizes: {n_params:,} / {n_total:,} params (GRU + head only; CNN + summary_proj frozen)")
+    print(f"Initial train acc: {best_acc:.4f}  | val acc: {val_acc:.4f}"
+          f"  |  sigma0: {sigma:.4f}")
+
+    # CMA options — suppress internal output, we print ourselves
+    cma_opts = {
+        'seed':        seed,
+        'maxiter':     n_gen,
+        'verbose':     -9,
+        'tolx':        1e-8,
+        'tolfun':      1e-7,
+        'CMA_diagonal': True,   # O(n) memory instead of O(n^2)
+    }
+    if popsize is not None:
+        cma_opts['popsize'] = popsize   # default: 4 + floor(3 * ln(n_params))
+
+    es = cma.CMAEvolutionStrategy(x0, sigma, cma_opts)
+
+    header = f"{'Gen':>5} | {'BestAcc':>8} | {'ValAcc':>8} | | {'TestAcc':>8}  {'Sigma':>10} | {'Improved':>9}"
+    print("\n" + header)
+    print("-" * len(header))
+
+    best_params = x0.copy()
+    gen         = 0
+
+    while not es.stop():
+        gen += 1
+
+        # fast_loader = _make_subset_loader(train_loader, max_batches=10)
+        
+        # ask: sample population of candidate solutions from current distribution
+        solutions = es.ask()                          # list of float64 arrays, len = popsize
+
+        # evaluate each candidate — CMA minimizes so negate accuracy
+        fitnesses = []
+        for sol in solutions:
+            set_flat_params(model, sol.astype(np.float32))
+            acc = fitness(model, train_loader, device)
+            fitnesses.append(-acc)                    # minimize -acc = maximize acc
+
+        # tell: CMA updates mean, covariance matrix, and step size
+        es.tell(solutions, fitnesses)
+
+        # track best of this generation
+        best_idx     = int(np.argmin(fitnesses))
+        gen_best_acc = -fitnesses[best_idx]
+        improved     = gen_best_acc > best_acc
+
+        if improved:
+            best_acc    = gen_best_acc
+            best_params = solutions[best_idx].copy()
+            set_flat_params(model, best_params.astype(np.float32))
+            torch.save(
+                model.state_dict(),
+                os.path.join(output_dir, "best_clf.pt"),
+            )
+
+        # train acc of best offspring this generation (for monitoring overfitting)
+        set_flat_params(model, solutions[best_idx].astype(np.float32))
+        val_acc = fitness(model, val_loader, device)
+        test_acc = fitness(model, test_loader, device)
+
+        # restore best params into model
+        set_flat_params(model, best_params.astype(np.float32))
+
+        print(f"{gen:5d} | {best_acc:8.4f} | {val_acc:8.4f} | {test_acc:8.4f} | "
+              f"{es.sigma:10.6f} | {'yes' if improved else 'no':>9}")
+
+        # stop when val and train acc are close — model has converged without overfitting
+        if best_acc >= acc_min and abs(val_acc - best_acc) <= acc_gap_tol:
+            print(f"\nEarly stop: train_acc={best_acc:.4f} val_acc={val_acc:.4f} "
+                  f"gap={abs(val_acc - best_acc):.4f} <= tol={acc_gap_tol}")
+            break
+
+    print(f"\nCMA-ES stopped: {es.stop()}")
+
+    # restore best into model for final eval
+    set_flat_params(model, best_params.astype(np.float32))
+    return best_acc
+
+
+# -------------------------------------------------------------------------
+# Main
+# -------------------------------------------------------------------------
+def train(args):
+    set_seed(args.seed)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Device: {device}")
+    os.makedirs(args.output_dir, exist_ok=True)
+
+    print("\nLoading data...")
+    train_loader, val_loader, test_loader, scalers = build_clf_dataloaders(
+        content_dir = args.content_dir,
+        batch_size  = args.batch_size,
+        n_samples   = args.n_samples,
+        val_ratio   = 0.1,
+        num_workers = args.num_workers,
+        seed        = args.seed,
+    )
+
+    dq_scaler, summary_scaler = scalers
+    joblib.dump(dq_scaler,      os.path.join(args.output_dir, "dq_scaler.pkl"))
+    joblib.dump(summary_scaler, os.path.join(args.output_dir, "summary_scaler.pkl"))
+
+    summary_feats = summary_scaler.n_features_in_
+    print(f"summary_feats: {summary_feats}")
+
+    model = BatteryRULClassifier(
+        cnn_dim       = args.cnn_dim,
+        gru_dim       = args.gru_dim,
+        gru_layers    = args.gru_layers,
+        summary_feats = summary_feats,
+        n_classes     = N_CLASSES,
+        dropout       = 0.0,           # dropout off — ES evaluates deterministically
+    ).to(device)
+
+    n_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Model parameters: {n_params:,}\n")
+
+    # ── Layer-by-layer summary ────────────────────────────────────────────────
+    print("Model Summary:")
+    print("=" * 80)
+    print(f"  {'Layer':<38} {'Output Shape':<25} {'Params':>10}")
+    print("-" * 80)
+
+    _handles = []
+    _summary = []
+
+    def _hook(module, inp, out):
+        if len(list(module.children())) == 0:          # leaf modules only
+            n = sum(p.numel() for p in module.parameters())
+            shape = tuple(out.shape) if isinstance(out, torch.Tensor) else "?"
+            _summary.append((module.__class__.__name__, shape, n))
+
+    for m in model.modules():
+        _handles.append(m.register_forward_hook(_hook))
+
+    _dummy_dq      = torch.zeros(1, N_INPUT, 1, V_BINS,      device=device)  # BML: V_BINS from dataset_clf_bml
+    _dummy_summary = torch.zeros(1, N_INPUT, summary_feats,  device=device)
+    with torch.no_grad():
+        model(_dummy_dq, _dummy_summary)
+
+    for h in _handles:
+        h.remove()
+
+    for name, shape, n in _summary:
+        print(f"  {name:<38} {str(shape):<25} {n:>10,}")
+
+    print("=" * 80)
+    print(f"  {'Total trainable parameters':<38} {'':25} {n_params:>10,}")
+    print("=" * 80 + "\n")
+
+    # ── Load pretrained weights (optional) ───────────────────────────────
+    if args.pretrain_ckpt:
+        ckpt = torch.load(args.pretrain_ckpt, map_location=device, weights_only=True)
+        model_state = model.state_dict()
+        matched, skipped = {}, []
+        for k, v in ckpt.items():
+            if k in model_state and model_state[k].shape == v.shape:
+                matched[k] = v
+            else:
+                skipped.append(f"{k}: ckpt{list(v.shape)} vs model"
+                               f"{list(model_state[k].shape) if k in model_state else 'missing'}")
+        model.load_state_dict(matched, strict=False)
+        print(f"Pretrained weights loaded from: {args.pretrain_ckpt}")
+        print(f"  Matched: {len(matched)}/{len(ckpt)} keys")
+        if skipped:
+            print(f"  Skipped (shape mismatch or missing):")
+            for s in skipped:
+                print(f"    {s}")
+    else:
+        print("No pretrained weights — starting from random init.")
+
+    # ── Loss + pred_fn (for final evaluate only, not used in ES fitness) ─
+    use_ordinal = args.loss == "ordinal"
+    if use_ordinal:
+        criterion = OrdinalLoss(n_classes=N_CLASSES)
+        pred_fn   = predict_cls
+        print("Loss: OrdinalLoss (N-1 sigmoid thresholds)\n")
+    else:
+        criterion = nn.CrossEntropyLoss()
+        pred_fn   = lambda logits: logits.argmax(dim=1)
+        print("Loss: CrossEntropyLoss\n")
+
+    # ── CMA-ES training ───────────────────────────────────────────────────
+    best_val_acc = cmaes_train(
+        model        = model,
+        train_loader = val_loader,
+        val_loader   = train_loader,
+        test_loader  = test_loader,
+        device       = device,
+        n_gen        = args.n_gen,
+        sigma        = args.sigma,
+        popsize      = args.popsize,
+        output_dir   = args.output_dir,
+        seed         = args.seed,
+        acc_gap_tol  = args.acc_gap_tol,
+        acc_min      = args.acc_min,
+    )
+
+    # ---- Test ----
+    print("\n" + "=" * 60)
+    model.load_state_dict(
+        torch.load(os.path.join(args.output_dir, "best_clf.pt"),
+                   map_location=device, weights_only=True)
+    )
+    te_loss, te_acc, pred, true = evaluate(model, test_loader, criterion, pred_fn, device)
+
+    print(f"\nTest Loss: {te_loss:.4f}  Accuracy: {te_acc:.4f}")
+    print("\nClassification Report:")
+    print(classification_report(
+          true, 
+          pred,
+          labels=list(range(N_CLASSES)), 
+          target_names=["RUL>400", "RUL>300", "RUL>200", "RUL>100", "RUL<100"]))
+    print("Confusion Matrix:")
+    print(confusion_matrix(true, pred))
+
+    np.save(os.path.join(args.output_dir, "clf_pred.npy"), pred)
+    np.save(os.path.join(args.output_dir, "clf_true.npy"), true)
+    print(f"\nSaved to {args.output_dir}/")
+
+
+# -------------------------------------------------------------------------
+# Entry point
+# -------------------------------------------------------------------------
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--content_dir", default="./content_bml")
+    parser.add_argument("--output_dir",  default="./checkpoints_es_bml")
+    parser.add_argument("--batch_size",  type=int,   default=256)   # larger batch = stable fitness signal
+    parser.add_argument("--n_samples",   type=int,   default=600)
+    parser.add_argument("--seed",        type=int,   default=42)
+    parser.add_argument("--cnn_dim",     type=int,   default=32)
+    parser.add_argument("--gru_dim",     type=int,   default=32)
+    parser.add_argument("--gru_layers",  type=int,   default=2)
+    parser.add_argument("--num_workers", type=int,   default=0)
+    parser.add_argument("--pretrain_ckpt", default=None,
+                        help="path to best_clf.pt from train_clf_bml.py")
+    parser.add_argument("--loss", default="ordinal",
+                        choices=["cross_entropy", "ordinal"],
+                        help="Loss function for final test evaluation only")
+    # ── CMA-ES hyperparameters ───────────────────────────────────────────
+    parser.add_argument("--n_gen",   type=int,   default=20,  help="max generations")
+    parser.add_argument("--sigma",   type=float, default=0.01, help="initial step size (sigma0)")
+    parser.add_argument("--popsize", type=int,   default=None,
+                        help="CMA population size; None = auto (4 + 3*ln(n_params))")
+    parser.add_argument("--acc_gap_tol", type=float, default=0.01,
+                        help="stop when |train_acc - val_acc| <= this (convergence check)")
+    parser.add_argument("--acc_min",     type=float, default=0.70,
+                        help="gap stop only triggers when val_acc >= this floor")
+    args = parser.parse_args()
+
+    train(args)

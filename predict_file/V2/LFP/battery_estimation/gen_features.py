@@ -1,0 +1,278 @@
+"""
+gen_features.py — Extract features from MIT battery .mat files and save .npz per cell
+
+Usage:
+    python gen_features.py --data_dir ./data --out_dir ./content
+
+Output:
+    ./content/batch1c000.npz
+    ./content/batch1c001.npz
+    ...
+
+Each .npz contains exactly what load_mat_batch() built per cell:
+    cycle_life   scalar int
+    qd           (N_cycles,) float32
+    ir           (N_cycles,) float32
+    tmax         (N_cycles,) float32
+    tavg         (N_cycles,) float32
+    chargetime   (N_cycles,) float32
+    dqdv_max     (N_cycles,) float32
+    dqdv_min     (N_cycles,) float32
+    dqdv_avg     (N_cycles,) float32
+    qdlin        (N_cycles, 1000) float32
+"""
+
+import os
+import argparse
+import numpy as np
+import h5py
+
+V_BINS       = 1000
+EOL_FRACTION = 0.8   # capacity retention threshold that defines end-of-life
+
+MAT_FILES = {
+    "2017-05-12_batchdata_updated_struct_errorcorrect.mat": "batch1",
+    "2017-06-30_batchdata_updated_struct_errorcorrect.mat": "batch2",
+    "2018-04-12_batchdata_updated_struct_errorcorrect.mat": "batch3",
+}
+
+
+
+
+def _find_eol_idx(qd: np.ndarray, eol_fraction: float = EOL_FRACTION) -> int:
+    qd = np.asarray(qd, dtype=np.float32)
+
+    n_ref     = 10
+    q_init    = float(np.max(qd[:n_ref]))
+
+    q_eol     = eol_fraction * q_init
+
+
+    for i in range(len(qd)):
+        if i < n_ref:
+            continue
+        if qd[i] < q_eol:
+            return int(i)
+
+    return - 1
+
+def _interp_nan(arr: np.ndarray) -> np.ndarray:
+    """Replace NaN values with linear interpolation; edge NaNs use nearest valid value."""
+    arr   = arr.copy()
+    nans  = np.isnan(arr)
+    if not nans.any():
+        return arr
+    idx   = np.arange(len(arr))
+    valid = ~nans
+    if not valid.any():
+        arr[:] = 0.0
+        return arr
+    arr[nans] = np.interp(idx[nans], idx[valid], arr[valid])
+    return arr
+
+
+
+def _deref_scalar(f, ref) -> float:
+    return float(np.array(f[ref]).flat[0])
+
+
+def _deref_qdlin(f, ref) -> np.ndarray:
+    return np.array(f[ref], dtype=np.float32).reshape(-1)
+
+
+def extract_mat(mat_path: str, batch_prefix: str, out_dir: str):
+    print(f"  Loading {os.path.basename(mat_path)} ...", end=" ", flush=True)
+    saved = 0
+
+    with h5py.File(mat_path, "r") as f:
+        batch   = f["batch"]
+        n_cells = batch["cycle_life"].shape[0]
+
+        for i in range(n_cells):
+            try:
+                
+                try:
+                    cycle_life = int(_deref_scalar(f, batch["cycle_life"][i, 0]))
+
+                    sum_grp    = f[batch["summary"][i, 0]]
+                    qd         = _interp_nan(np.array(sum_grp["QDischarge"], dtype=np.float32).reshape(-1))
+                    IR         = _interp_nan(np.array(sum_grp["IR"],         dtype=np.float32).reshape(-1))
+                    tmax       = _interp_nan(np.array(sum_grp["Tmax"],       dtype=np.float32).reshape(-1))
+                    tavg       = _interp_nan(np.array(sum_grp["Tavg"],       dtype=np.float32).reshape(-1))
+                    chargetime = _interp_nan(np.array(sum_grp["chargetime"], dtype=np.float32).reshape(-1))
+                except Exception as e:
+                    print(f"\n    cycle_life of {i}: {e}")
+                    
+                    sum_grp    = f[batch["summary"][i, 0]]
+                    qd         = _interp_nan(np.array(sum_grp["QDischarge"], dtype=np.float32).reshape(-1))
+                    IR         = _interp_nan(np.array(sum_grp["IR"],         dtype=np.float32).reshape(-1))
+                    tmax       = _interp_nan(np.array(sum_grp["Tmax"],       dtype=np.float32).reshape(-1))
+                    tavg       = _interp_nan(np.array(sum_grp["Tavg"],       dtype=np.float32).reshape(-1))
+                    chargetime = _interp_nan(np.array(sum_grp["chargetime"], dtype=np.float32).reshape(-1))                 
+                    cycle_life = len(qd) + 1
+
+                eol_idx = _find_eol_idx(qd)
+    
+                q_init   = float(np.max(qd[: min(10, len(qd))]))
+                if eol_idx > 0:   
+                    retained = float(qd[eol_idx]) / q_init if q_init > 0 else 0.0
+                    eol_pct  = retained * 100
+                    print(f"    EOL at idx {int(eol_idx)} -> cycle {int(cycle_life)}  "
+                                  f"(Qd at {eol_pct:.1f}% of initial)")
+                else:
+                    retained = float(qd[-1] / q_init) if q_init > 0 else 0.0
+                    eol_pct  = retained * 100
+                    print(f"    EOL at idx {int(eol_idx)} -> cycle {int(cycle_life)}  "
+                                  f"(Qd at {eol_pct:.1f}% of initial)")
+                    if retained > EOL_FRACTION + 0.05:
+                        print(f" This cell is not finished its life-cycle ...")   
+                        continue
+                    
+                
+                
+                '''
+                === sample values — cell 0, cycle 0 ===
+                I                              = [ref] shapes=[(1, 762), (1, 764), (1, 758)]
+                Qc                             = [ref] shapes=[(1, 762), (1, 764), (1, 758)]
+                Qd                             = [ref] shapes=[(1, 762), (1, 764), (1, 758)]
+                Qdlin                          = [ref] shapes=[(1, 1000), (1, 1000), (1, 1000)]
+                T                              = [ref] shapes=[(1, 762), (1, 764), (1, 758)]
+                Tdlin                          = [ref] shapes=[(1, 1000), (1, 1000), (1, 1000)]
+                V                              = [ref] shapes=[(1, 762), (1, 764), (1, 758)]
+                discharge_dQdV                 = [ref] shapes=[(1, 1000), (1, 1000), (1, 1000)]
+                t                              = [ref] shapes=[(1, 762), (1, 764), (1, 758)]
+                '''
+
+                cyc_grp  = f[batch["cycles"][i, 0]]
+                qdlin_ds = cyc_grp["Qdlin"]
+                discharge_dqdv_ds  = cyc_grp["discharge_dQdV"]
+                qd_ds    = cyc_grp["Qd"]
+                qc_ds    = cyc_grp["Qc"]
+                T_ds     = cyc_grp["T"]
+                I_ds    = cyc_grp["I"]
+                ct_ds    = cyc_grp["t"]
+                
+                
+                n_cyc    = cycle_life
+
+                qdlin_list       = []
+                dqdv_list        = []
+                dqdv_slope_max   = []
+                dqdv_slope_min   = []
+                dqdv_min         = []
+                dqdv_avg         = []
+                log_std_dq       = [] 
+                log_std_dc       = [] 
+                log_std_T        = [] 
+                log_std_I        = [] 
+                log_std_ct       = []
+
+                for j in range(n_cyc):
+                    try:
+                        curve = _interp_nan(_deref_qdlin(f, qdlin_ds[j, 0]))
+                        if len(curve) != V_BINS:
+                            tmp = np.zeros(V_BINS, dtype=np.float32)
+                            tmp[:min(len(curve), V_BINS)] = curve[:V_BINS]
+                            curve = tmp
+                        qdlin_list.append(curve)
+                    except Exception:
+                        qdlin_list.append(np.zeros(V_BINS, dtype=np.float32))
+                        
+                        
+                    try:
+                        curve = _deref_qdlin(f, discharge_dqdv_ds[j, 0])
+                        if len(curve) != V_BINS:
+                            tmp = np.zeros(V_BINS, dtype=np.float32)
+                            tmp[:min(len(curve), V_BINS)] = curve[:V_BINS]
+                            curve = tmp
+                        dqdv_list.append(curve)
+                    except Exception:
+                        dqdv_list.append(np.zeros(V_BINS, dtype=np.float32))
+                        
+                    try:
+                        dqdv  = _interp_nan(f[discharge_dqdv_ds[j, 0]][()].flatten().astype(np.float32))
+                        qd_c  = _interp_nan(f[qd_ds[j, 0]][()].flatten().astype(np.float32))
+                        qc_c  = _interp_nan(f[qc_ds[j, 0]][()].flatten().astype(np.float32))
+                        T_c   = _interp_nan(f[T_ds[j, 0]][()].flatten().astype(np.float32))
+                        I_c   = _interp_nan(f[I_ds[j, 0]][()].flatten().astype(np.float32))
+                        ct_c  = _interp_nan(f[ct_ds[j, 0]][()].flatten().astype(np.float32))
+                        
+                        dqdv  = dqdv[100:900] # get midle window
+   
+                                             
+                        
+                        dqdv = np.convolve(dqdv, np.ones(10)/10, mode='valid') 
+                        dqdv_slope = np.diff(dqdv)
+                        
+                        dqdv_slope_max.append(float(np.max(dqdv_slope)))
+                        dqdv_slope_min.append(float(np.min(dqdv_slope)))
+                        dqdv_min.append(float(np.min(dqdv)))
+                        dqdv_avg.append(float(np.mean(dqdv)))
+                        log_std_dq.append(float(20.0 * np.log10(np.std(qd_c).clip(1e-9))))
+                        log_std_dc.append(float(20.0 * np.log10(np.std(qc_c).clip(1e-9))))
+                        log_std_T.append( float(20.0 * np.log10(np.std(T_c).clip(1e-9))))
+                        log_std_I.append(float(20.0 * np.log10(np.std(I_c).clip(1e-9))))
+                        log_std_ct.append(float(20.0 * np.log10(np.std(ct_c).clip(1e-9))))
+                        
+                    except Exception:
+                        dqdv_slope_max.append(0.0)
+                        dqdv_slope_min.append(0.0)
+                        dqdv_min.append(0.0)
+                        dqdv_avg.append(0.0)
+                        log_std_dq.append(0.0)
+                        log_std_dc.append(0.0)
+                        log_std_T.append(0.0)
+                        log_std_I.append(0.0)
+                        log_std_ct.append(0.0)
+
+                out_path = os.path.join(out_dir, f"{batch_prefix}c{i:03d}.npz")
+                np.savez_compressed(
+                    out_path,
+                    cycle_life = np.array(cycle_life),
+                    
+                    qd         = qd,
+                    IR         = IR,
+                    tmax       = tmax,
+                    tavg       = tavg,
+                    chargetime = chargetime,
+                    dqdv_slope_max   = np.array(dqdv_slope_max, dtype=np.float32),
+                    dqdv_slope_min   = np.array(dqdv_slope_min, dtype=np.float32),
+                    dqdv_min   = np.array(dqdv_min, dtype=np.float32),
+                    dqdv_avg   = np.array(dqdv_avg, dtype=np.float32),
+                    log_std_dq = _interp_nan(np.array(log_std_dq, dtype=np.float32)),
+                    log_std_dc = _interp_nan(np.array(log_std_dc, dtype=np.float32)),
+                    log_std_T = _interp_nan(np.array(log_std_T, dtype=np.float32)),
+                    log_std_I = _interp_nan(np.array(log_std_I, dtype=np.float32)),
+                    log_std_ct = _interp_nan(np.array(log_std_ct, dtype=np.float32)),
+                    qdlin      = np.stack(qdlin_list, axis=0),   # (N_cycles, 1000)
+                    dqdv       = np.stack(dqdv_list, axis=0),    # (N_cycles, 1000)
+                    
+                )
+                saved += 1
+
+            except Exception as e:
+                print(f"\n    Skipped cell {i}: {e}")
+
+    print(f"{saved} cells saved")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_dir", default="./data")
+    parser.add_argument("--out_dir",  default="./content")
+    args = parser.parse_args()
+
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    for fname, bname in MAT_FILES.items():
+        path = os.path.join(args.data_dir, fname)
+        if not os.path.exists(path):
+            print(f"  WARNING: {fname} not found — skipping")
+            continue
+        extract_mat(path, bname, args.out_dir)
+
+    print(f"\nDone. Files saved to {args.out_dir}/")
+
+
+if __name__ == "__main__":
+    main()
