@@ -3,6 +3,6 @@ Method;MIT;HUST;LFP (MIT+HUST);Tongji;ISU;NMC;ZN-coin
 RF;90,85;95,83;97,79;0;83,67;52,48;0
 CNN-BiGRU;81,77;84,65;74,23;86,67;54,7;55,71;35,97
 CNN-BiGRU + CMA-ES;;;;;;;
-Transformer;;;;;;;
+Transformer;77,44;71,4;74,6;83,87;48,97;52,23;47,03
 ;;;;;;;
 NMC is the mixed dataset of all NMC cell from CALB, ISU, MICH, MICH_EXP, RWTH, SDU;;;;;;;
