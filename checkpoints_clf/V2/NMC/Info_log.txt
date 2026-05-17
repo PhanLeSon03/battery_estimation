@@ -1,0 +1,284 @@
+Device: cuda
+Logging to: ./checkpoints/NMC\Info_log.txt
+
+Loading BML data...
+Loading BML .npz feature files...
+  Loaded 548 BML cells
+TrainCellName = ['ISU-ILCC_G44C4', 'SDU_Battery_30', 'ISU-ILCC_G49C2', 'SDU_Battery_42',
+                 'SDU_Battery_23', 'MICH_MCForm33_pouch_NMC_45C_0-100_1-1C_c', 'Tongji1_CY45-05_1--20', 'SDU_Battery_35',
+                 'MICH_BLForm5_pouch_NMC_45C_0-100_1-1C_e', 'ISU-ILCC_G53C4', 'XJTU_2C_battery-5', 'ISU-ILCC_G5C1',
+                 'SNL_18650_NMC_25C_0-100_0.5-3C_d', 'Tongji1_CY25-1_1--7', 'RWTH_009', 'ISU-ILCC_G37C4',
+                 'ISU-ILCC_G7C2', 'RWTH_027', 'Tongji2_CY45-05_1--12', 'RWTH_033',
+                 'SDU_Battery_73', 'MICH_BLForm13_pouch_NMC_25C_0-100_1-1C_c', 'SDU_Battery_3', 'ISU-ILCC_G54C1',
+                 'ISU-ILCC_G47C4', 'Tongji1_CY25-025_1--5', 'SDU_Battery_59', 'ISU-ILCC_G50C2',
+                 'Tongji1_CY45-05_1--13', 'ISU-ILCC_G38C3', 'ISU-ILCC_G59C2', 'ISU-ILCC_G35C2',
+                 'ISU-ILCC_G21C4', 'ISU-ILCC_G32C1', 'ISU-ILCC_G30C4', 'Tongji1_CY45-05_1--8',
+                 'SDU_Battery_31', 'ISU-ILCC_G22C3', 'SDU_Battery_65', 'ISU-ILCC_G61C2',
+                 'RWTH_006', 'MICH_MCForm24_pouch_NMC_25C_0-100_1-1C_d', 'ISU-ILCC_G18C2', 'MICH_BLForm12_pouch_NMC_25C_0-100_1-1C_b',
+                 'ISU-ILCC_G10C2', 'SDU_Battery_86', 'ISU-ILCC_G57C3', 'ISU-ILCC_G25C2',
+                 'Tongji1_CY25-025_1--7', 'Tongji3_CY25-05_1--2', 'ISU-ILCC_G42C2', 'XJTU_2C_battery-7',
+                 'SDU_Battery_71', 'SNL_18650_NMC_35C_0-100_0.5-1C_b', 'ISU-ILCC_G8C2', 'Tongji1_CY25-05_1--15',
+                 'ISU-ILCC_G6C1', 'ISU-ILCC_G23C2', 'Tongji2_CY45-05_1--27', 'ISU-ILCC_G50C4',
+                 'Tongji1_CY45-05_1--27', 'SDU_Battery_54', 'RWTH_046', 'SDU_Battery_2',
+                 'RWTH_019', 'RWTH_005', 'RWTH_014', 'SDU_Battery_76',
+                 'SNL_18650_NMC_15C_0-100_0.5-1C_a', 'Tongji1_CY25-05_1--13', 'SDU_Battery_40', 'ISU-ILCC_G36C2',
+                 'ISU-ILCC_G3C4', 'ISU-ILCC_G8C1', 'ISU-ILCC_G45C1', 'ISU-ILCC_G41C3',
+                 'XJTU_3C_battery-8', 'ISU-ILCC_G28C1', 'XJTU_2C_battery-2', 'Tongji3_CY25-05_4--1',
+                 'Tongji1_CY45-05_1--15', 'Tongji2_CY35-05_1--4', 'RWTH_028', 'ISU-ILCC_G55C1',
+                 'MICH_BLForm3_pouch_NMC_45C_0-100_1-1C_c', 'SDU_Battery_36', 'Tongji1_CY45-05_1--1', 'ISU-ILCC_G12C4',
+                 'ISU-ILCC_G54C2', 'ISU-ILCC_G52C4', 'SDU_Battery_27', 'ISU-ILCC_G12C2',
+                 'ISU-ILCC_G57C2', 'ISU-ILCC_G43C3', 'ISU-ILCC_G20C2', 'RWTH_016',
+                 'ISU-ILCC_G4C2', 'RWTH_013', 'RWTH_047', 'ISU-ILCC_G31C3',
+                 'ISU-ILCC_G32C3', 'RWTH_031', 'SDU_Battery_9', 'Tongji1_CY25-1_1--4',
+                 'MICH_BLForm10_pouch_NMC_25C_0-100_1-1C_j', 'XJTU_3C_battery-5', 'Tongji1_CY45-05_1--22', 'ISU-ILCC_G37C1',
+                 'SNL_18650_NMC_25C_0-100_0.5-3C_a', 'ISU-ILCC_G47C1', 'ISU-ILCC_G64C1', 'ISU-ILCC_G59C4',
+                 'SNL_18650_NMC_25C_0-100_0.5-1C_d', 'ISU-ILCC_G7C1', 'MICH_MCForm29_pouch_NMC_25C_0-100_1-1C_i', 'SDU_Battery_44',
+                 'ISU-ILCC_G19C3', 'RWTH_002', 'SDU_Battery_67', 'SNL_18650_NMC_15C_0-100_0.5-1C_b',
+                 'ISU-ILCC_G3C3', 'Tongji2_CY45-05_1--14', 'Tongji1_CY25-05_1--12', 'ISU-ILCC_G17C4',
+                 'Tongji2_CY45-05_1--22', 'Tongji1_CY25-1_1--5', 'Tongji1_CY45-05_1--21', 'Tongji1_CY25-05_1--18',
+                 'RWTH_036', 'SDU_Battery_58', 'SNL_18650_NMC_25C_0-100_0.5-1C_c', 'ISU-ILCC_G29C1',
+                 'ISU-ILCC_G58C4', 'SDU_Battery_18', 'ISU-ILCC_G24C4', 'Tongji2_CY25-05_1--16',
+                 'ISU-ILCC_G5C2', 'ISU-ILCC_G58C3', 'ISU-ILCC_G16C3', 'ISU-ILCC_G4C4',
+                 'MICH_BLForm8_pouch_NMC_45C_0-100_1-1C_h', 'MICH_BLForm9_pouch_NMC_45C_0-100_1-1C_i', 'MICH_BLForm7_pouch_NMC_45C_0-100_1-1C_g', 'ISU-ILCC_G19C2',
+                 'ISU-ILCC_G27C1', 'ISU-ILCC_G9C2', 'Tongji1_CY45-05_1--24', 'ISU-ILCC_G2C2',
+                 'Tongji2_CY45-05_1--19', 'ISU-ILCC_G10C3', 'SDU_Battery_7', 'ISU-ILCC_G14C4',
+                 'Tongji1_CY45-05_1--2', 'Tongji1_CY25-1_1--3', 'Tongji1_CY35-05_1--2', 'SDU_Battery_5',
+                 'SDU_Battery_11', 'SDU_Battery_84', 'ISU-ILCC_G27C3', 'ISU-ILCC_G41C4',
+                 'ISU-ILCC_G46C4', 'RWTH_004', 'RWTH_020', 'ISU-ILCC_G18C3',
+                 'MICH_BLForm18_pouch_NMC_25C_0-100_1-1C_h', 'SNL_18650_NMC_25C_0-100_0.5-3C_b', 'MICH_MCForm25_pouch_NMC_25C_0-100_1-1C_e', 'SNL_18650_NMC_35C_0-100_0.5-2C_b',
+                 'MICH_BLForm16_pouch_NMC_25C_0-100_1-1C_f', 'Tongji2_CY45-05_1--26', 'ISU-ILCC_G6C3', 'RWTH_015',
+                 'ISU-ILCC_G46C1', 'RWTH_010', 'XJTU_3C_battery-6', 'ISU-ILCC_G60C4',
+                 'ISU-ILCC_G9C1', 'ISU-ILCC_G33C2', 'RWTH_040', 'ISU-ILCC_G47C2',
+                 'ISU-ILCC_G58C2', 'Tongji1_CY25-05_1--7', 'SDU_Battery_82', 'ISU-ILCC_G43C4',
+                 'ISU-ILCC_G13C4', 'Tongji2_CY25-05_1--8', 'ISU-ILCC_G28C4', 'Tongji1_CY25-05_1--1',
+                 'ISU-ILCC_G6C4', 'ISU-ILCC_G59C3', 'Tongji1_CY45-05_1--26', 'Tongji3_CY25-05_4--3',
+                 'ISU-ILCC_G12C3', 'Tongji1_CY25-05_1--14', 'XJTU_3C_battery-4', 'RWTH_048',
+                 'ISU-ILCC_G18C1', 'ISU-ILCC_G34C1', 'RWTH_025', 'SDU_Battery_74',
+                 'ISU-ILCC_G7C4', 'Tongji1_CY45-05_1--18', 'Tongji2_CY45-05_1--2', 'RWTH_012',
+                 'ISU-ILCC_G54C3', 'ISU-ILCC_G2C4', 'MICH_BLForm19_pouch_NMC_25C_0-100_1-1C_i', 'SNL_18650_NMC_25C_0-100_0.5-0.5C_b',
+                 'ISU-ILCC_G50C3', 'SNL_18650_NMC_15C_0-100_0.5-2C_a', 'Tongji3_CY25-05_1--3', 'ISU-ILCC_G47C3',
+                 'SDU_Battery_16', 'ISU-ILCC_G29C3', 'MICH_BLForm4_pouch_NMC_45C_0-100_1-1C_d', 'SDU_Battery_34',
+                 'Tongji1_CY25-1_1--9', 'ISU-ILCC_G24C2', 'SDU_Battery_22', 'RWTH_039',
+                 'ISU-ILCC_G51C3', 'Tongji3_CY25-05_2--2', 'RWTH_043', 'ISU-ILCC_G62C2',
+                 'ISU-ILCC_G21C3', 'ISU-ILCC_G17C3', 'ISU-ILCC_G49C4', 'ISU-ILCC_G44C2',
+                 'XJTU_3C_battery-7', 'ISU-ILCC_G34C4', 'SDU_Battery_14', 'ISU-ILCC_G53C1',
+                 'SDU_Battery_62', 'ISU-ILCC_G55C4', 'MICH_MCForm23_pouch_NMC_25C_0-100_1-1C_c', 'MICH_BLForm6_pouch_NMC_45C_0-100_1-1C_f',
+                 'SNL_18650_NMC_25C_0-100_0.5-1C_b', 'RWTH_037', 'SDU_Battery_68', 'Tongji2_CY45-05_1--24',
+                 'SDU_Battery_38', 'ISU-ILCC_G33C1', 'Tongji1_CY25-05_1--2', 'ISU-ILCC_G9C3',
+                 'Tongji1_CY25-05_1--17', 'MICH_BLForm17_pouch_NMC_25C_0-100_1-1C_g', 'SDU_Battery_17', 'ISU-ILCC_G62C1',
+                 'ISU-ILCC_G20C1', 'Tongji1_CY25-1_1--8', 'MICH_MCForm30_pouch_NMC_25C_0-100_1-1C_j', 'Tongji1_CY25-025_1--1',
+                 'MICH_MCForm36_pouch_NMC_45C_0-100_1-1C_f', 'ISU-ILCC_G4C3', 'ISU-ILCC_G62C3', 'ISU-ILCC_G60C1',
+                 'SDU_Battery_69', 'ISU-ILCC_G52C3', 'ISU-ILCC_G39C1', 'ISU-ILCC_G16C2',
+                 'ISU-ILCC_G48C3', 'ISU-ILCC_G13C3', 'Tongji2_CY35-05_1--1', 'ISU-ILCC_G5C3',
+                 'SDU_Battery_15', 'SDU_Battery_66', 'Tongji2_CY45-05_1--18', 'ISU-ILCC_G28C3',
+                 'ISU-ILCC_G13C1', 'SDU_Battery_4', 'Tongji1_CY45-05_1--14', 'ISU-ILCC_G25C3',
+                 'Tongji2_CY45-05_1--20', 'Tongji2_CY45-05_1--16', 'SDU_Battery_78', 'ISU-ILCC_G10C4',
+                 'ISU-ILCC_G34C3', 'ISU-ILCC_G22C4', 'RWTH_044', 'ISU-ILCC_G34C2',
+                 'SDU_Battery_29', 'SNL_18650_NMC_25C_0-100_0.5-2C_b', 'Tongji1_CY25-05_1--11', 'SDU_Battery_56',
+                 'RWTH_049', 'MICH_BLForm1_pouch_NMC_45C_0-100_1-1C_a', 'SDU_Battery_64', 'SDU_Battery_85',
+                 'ISU-ILCC_G19C4', 'SDU_Battery_61', 'SDU_Battery_8', 'ISU-ILCC_G49C1',
+                 'SDU_Battery_57', 'ISU-ILCC_G42C1', 'ISU-ILCC_G40C2', 'ISU-ILCC_G6C2',
+                 'SDU_Battery_46', 'ISU-ILCC_G42C3', 'SDU_Battery_41', 'ISU-ILCC_G31C2',
+                 'RWTH_029', 'SDU_Battery_47', 'RWTH_032', 'SDU_Battery_39',
+                 'ISU-ILCC_G23C4', 'Tongji1_CY45-05_1--9', 'SDU_Battery_21', 'ISU-ILCC_G18C4',
+                 'MICH_MCForm27_pouch_NMC_25C_0-100_1-1C_g', 'ISU-ILCC_G60C3', 'ISU-ILCC_G37C3', 'Tongji2_CY45-05_1--13',
+                 'SDU_Battery_52', 'SDU_Battery_70', 'ISU-ILCC_G14C2', 'ISU-ILCC_G17C1',
+                 'ISU-ILCC_G63C1', 'SDU_Battery_6', 'ISU-ILCC_G37C2', 'MICH_MCForm26_pouch_NMC_25C_0-100_1-1C_f',
+                 'SDU_Battery_26', 'ISU-ILCC_G56C4', 'SNL_18650_NMC_35C_0-100_0.5-1C_c', 'ISU-ILCC_G20C3',
+                 'Tongji1_CY25-1_1--1', 'ISU-ILCC_G56C2', 'SDU_Battery_77', 'ISU-ILCC_G14C1',
+                 'ISU-ILCC_G56C3', 'Tongji1_CY25-05_1--3', 'Tongji1_CY35-05_1--1', 'ISU-ILCC_G63C3',
+                 'ISU-ILCC_G12C1', 'ISU-ILCC_G32C2', 'Tongji1_CY45-05_1--19', 'Tongji3_CY25-05_1--1',
+                 'Tongji1_CY25-05_1--10', 'Tongji1_CY45-05_1--12', 'Tongji1_CY45-05_1--16', 'SNL_18650_NMC_35C_0-100_0.5-2C_a',
+                 'SDU_Battery_60', 'SDU_Battery_12', 'MICH_MCForm38_pouch_NMC_45C_0-100_1-1C_h', 'SDU_Battery_37',
+                 'ISU-ILCC_G30C3', 'Tongji3_CY25-05_2--3', 'SDU_Battery_51', 'XJTU_2C_battery-8',
+                 'ISU-ILCC_G39C3', 'ISU-ILCC_G51C4', 'SDU_Battery_19', 'ISU-ILCC_G40C4',
+                 'RWTH_022', 'ISU-ILCC_G36C4', 'ISU-ILCC_G33C3', 'ISU-ILCC_G59C1',
+                 'MICH_MCForm34_pouch_NMC_45C_0-100_1-1C_d', 'Tongji2_CY35-05_1--2', 'ISU-ILCC_G5C4', 'ISU-ILCC_G32C4',
+                 'ISU-ILCC_G63C4', 'Tongji1_CY25-05_1--6', 'ISU-ILCC_G45C4', 'ISU-ILCC_G38C4',
+                 'SDU_Battery_1', 'Tongji1_CY45-05_1--23', 'MICH_MCForm37_pouch_NMC_45C_0-100_1-1C_g', 'SDU_Battery_80',
+                 'SDU_Battery_28', 'Tongji1_CY45-05_1--11', 'ISU-ILCC_G38C2', 'ISU-ILCC_G56C1',
+                 'ISU-ILCC_G28C2', 'XJTU_2C_battery-4', 'ISU-ILCC_G35C4', 'ISU-ILCC_G29C4',
+                 'MICH_MCForm39_pouch_NMC_45C_0-100_1-1C_i', 'ISU-ILCC_G29C2', 'SDU_Battery_83', 'Tongji1_CY45-05_1--28',
+                 'ISU-ILCC_G41C2', 'ISU-ILCC_G53C3', 'ISU-ILCC_G64C3', 'ISU-ILCC_G17C2',
+                 'ISU-ILCC_G3C2', 'ISU-ILCC_G2C3', 'SDU_Battery_49', 'ISU-ILCC_G13C2',
+                 'ISU-ILCC_G3C1', 'Tongji2_CY45-05_1--17', 'ISU-ILCC_G49C3', 'ISU-ILCC_G27C4',
+                 'ISU-ILCC_G64C2', 'Tongji1_CY25-025_1--6', 'Tongji2_CY35-05_1--3', 'ISU-ILCC_G10C1',
+                 'ISU-ILCC_G21C2', 'ISU-ILCC_G40C3', 'ISU-ILCC_G16C1', 'ISU-ILCC_G51C1',
+                 'RWTH_018', 'RWTH_030', 'ISU-ILCC_G30C1', 'RWTH_034',
+                 'RWTH_017', 'Tongji2_CY45-05_1--1', 'Tongji1_CY45-05_1--5', 'Tongji2_CY45-05_1--23',
+                 'RWTH_011', 'ISU-ILCC_G61C3', 'Tongji3_CY25-05_4--2', 'RWTH_038',
+                 'ISU-ILCC_G25C1', 'MICH_MCForm32_pouch_NMC_45C_0-100_1-1C_b', 'ISU-ILCC_G14C3', 'SNL_18650_NMC_35C_0-100_0.5-1C_d',
+                 'Tongji2_CY45-05_1--11', 'ISU-ILCC_G44C3', 'RWTH_008', 'Tongji1_CY25-05_1--19',
+                 'RWTH_021', 'ISU-ILCC_G58C1', 'ISU-ILCC_G1C2', 'RWTH_007',
+                 'RWTH_035', 'SDU_Battery_13', 'ISU-ILCC_G54C4', 'ISU-ILCC_G23C1',
+                 'Tongji2_CY45-05_1--25', 'ISU-ILCC_G36C3', 'ISU-ILCC_G21C1', 'SDU_Battery_43',
+                 'XJTU_2C_battery-3', 'MICH_MCForm35_pouch_NMC_45C_0-100_1-1C_e', 'RWTH_024', 'ISU-ILCC_G39C2',
+                 'Tongji1_CY25-025_1--4', 'Tongji1_CY45-05_1--7', 'Tongji3_CY25-05_2--1', 'ISU-ILCC_G45C3']
+ValCellName = ['ISU-ILCC_G22C1', 'ISU-ILCC_G8C3', 'SNL_18650_NMC_25C_0-100_0.5-2C_a', 'Tongji1_CY45-05_1--25',
+               'SDU_Battery_10', 'ISU-ILCC_G35C1', 'ISU-ILCC_G61C4', 'ISU-ILCC_G8C4',
+               'Tongji1_CY45-05_1--10', 'ISU-ILCC_G51C2', 'SDU_Battery_20', 'ISU-ILCC_G24C1',
+               'ISU-ILCC_G30C2', 'ISU-ILCC_G20C4', 'Tongji1_CY45-05_1--17', 'SDU_Battery_53',
+               'ISU-ILCC_G23C3', 'XJTU_3C_battery-1', 'ISU-ILCC_G4C1', 'Tongji2_CY25-05_1--15',
+               'SDU_Battery_48', 'ISU-ILCC_G41C1', 'SDU_Battery_55', 'SDU_Battery_81',
+               'ISU-ILCC_G45C2', 'ISU-ILCC_G55C3', 'SDU_Battery_45', 'XJTU_2C_battery-1',
+               'ISU-ILCC_G19C1', 'ISU-ILCC_G57C1', 'SDU_Battery_72', 'Tongji2_CY25-05_1--5',
+               'ISU-ILCC_G1C4', 'MICH_BLForm11_pouch_NMC_25C_0-100_1-1C_a', 'ISU-ILCC_G48C4', 'SDU_Battery_79',
+               'SNL_18650_NMC_25C_0-100_0.5-1C_a', 'MICH_MCForm22_pouch_NMC_25C_0-100_1-1C_b', 'ISU-ILCC_G22C2', 'ISU-ILCC_G31C4',
+               'Tongji1_CY25-1_1--6', 'Tongji2_CY45-05_1--8', 'ISU-ILCC_G36C1', 'ISU-ILCC_G24C3',
+               'ISU-ILCC_G52C2', 'RWTH_041', 'ISU-ILCC_G62C4', 'Tongji1_CY25-025_1--3',
+               'MICH_MCForm21_pouch_NMC_25C_0-100_1-1C_a', 'SDU_Battery_32', 'Tongji1_CY25-05_1--16', 'SDU_Battery_33',
+               'ISU-ILCC_G35C3', 'Tongji1_CY25-1_1--2']
+TestCellName = ['RWTH_045', 'MICH_BLForm14_pouch_NMC_25C_0-100_1-1C_d', 'Tongji2_CY45-05_1--28', 'XJTU_3C_battery-2',
+                'RWTH_003', 'ISU-ILCC_G52C1', 'ISU-ILCC_G46C2', 'ISU-ILCC_G33C4',
+                'ISU-ILCC_G1C3', 'ISU-ILCC_G40C1', 'ISU-ILCC_G64C4', 'ISU-ILCC_G63C2',
+                'SDU_Battery_50', 'ISU-ILCC_G39C4', 'CALB_0_B188', 'SDU_Battery_25',
+                'XJTU_3C_battery-3', 'MICH_BLForm15_pouch_NMC_25C_0-100_1-1C_e', 'ISU-ILCC_G44C1', 'RWTH_023',
+                'ISU-ILCC_G31C1', 'ISU-ILCC_G53C2', 'Tongji2_CY45-05_1--15', 'ISU-ILCC_G7C3',
+                'ISU-ILCC_G2C1', 'ISU-ILCC_G16C4', 'ISU-ILCC_G60C2', 'MICH_BLForm2_pouch_NMC_45C_0-100_1-1C_b',
+                'RWTH_042', 'XJTU_2C_battery-6', 'ISU-ILCC_G57C4', 'SNL_18650_NMC_35C_0-100_0.5-1C_a',
+                'SDU_Battery_24', 'ISU-ILCC_G38C1', 'MICH_BLForm20_pouch_NMC_25C_0-100_1-1C_j', 'MICH_MCForm31_pouch_NMC_45C_0-100_1-1C_a',
+                'SNL_18650_NMC_15C_0-100_0.5-2C_b', 'Tongji2_CY45-05_1--21', 'ISU-ILCC_G48C2', 'RWTH_026',
+                'ISU-ILCC_G46C3', 'ISU-ILCC_G1C1', 'Tongji1_CY25-05_1--4', 'ISU-ILCC_G43C1',
+                'Tongji1_CY25-05_1--5', 'ISU-ILCC_G50C1', 'ISU-ILCC_G27C2', 'MICH_MCForm28_pouch_NMC_25C_0-100_1-1C_h',
+                'SDU_Battery_75', 'SDU_Battery_63', 'ISU-ILCC_G55C2', 'ISU-ILCC_G43C2',
+                'MICH_MCForm40_pouch_NMC_45C_0-100_1-1C_j', 'ISU-ILCC_G48C1']
+Split — Train: 440  Val: 54   Test: 54
+Building train dataset...
+  Total index entries: 126880
+  Class 0: 25376 samples
+  Class 1: 25376 samples
+  Class 2: 25376 samples
+  Class 3: 25376 samples
+  Class 4: 25376 samples
+  Fitting scalers on subset...
+  Scalers fitted.
+Building val dataset...
+  Total index entries: 12285
+  Class 0: 2457 samples
+  Class 1: 2457 samples
+  Class 2: 2457 samples
+  Class 3: 2457 samples
+  Class 4: 2457 samples
+Building test dataset...
+  Total index entries: 14735
+  Class 0: 2947 samples
+  Class 1: 2947 samples
+  Class 2: 2947 samples
+  Class 3: 2947 samples
+  Class 4: 2947 samples
+summary_feats: 16
+Model parameters: 48,421
+
+Model Summary:
+================================================================================
+  Layer                                  Output Shape                  Params
+--------------------------------------------------------------------------------
+  Conv1d                                 (32, 16, 1000)                    96
+  BatchNorm1d                            (32, 16, 1000)                    32
+  GELU                                   (32, 16, 1000)                     0
+  Dropout                                (32, 16, 1000)                     0
+  MaxPool1d                              (32, 16, 500)                      0
+  Conv1d                                 (32, 32, 500)                  2,592
+  BatchNorm1d                            (32, 32, 500)                     64
+  GELU                                   (32, 32, 500)                      0
+  Dropout                                (32, 32, 500)                      0
+  MaxPool1d                              (32, 32, 250)                      0
+  Conv1d                                 (32, 32, 250)                  5,152
+  BatchNorm1d                            (32, 32, 250)                     64
+  GELU                                   (32, 32, 250)                      0
+  Dropout                                (32, 32, 250)                      0
+  AdaptiveAvgPool1d                      (32, 32, 1)                        0
+  Linear                                 (1, 32, 32)                      544
+  ELU                                    (1, 32, 32)                        0
+  Dropout                                (1, 32, 32)                        0
+  Dropout                                (1, 32, 64)                        0
+  GRU                                    ?                             37,632
+  Dropout                                (1, 64)                            0
+  Linear                                 (1, 32)                        2,080
+  ELU                                    (1, 32)                            0
+  Dropout                                (1, 32)                            0
+  Linear                                 (1, 5)                           165
+================================================================================
+  Total trainable parameters                                           48,421
+================================================================================
+
+Loss: OrdinalLoss
+
+Epoch |   TrLoss |   TrAcc |   VaLoss |   VaAcc |       LR
+----------------------------------------------------------
+    1 |   1.2912 |  0.5088 |   1.2247 |  0.4990 | 1.00e-03
+    2 |   1.0263 |  0.5924 |   1.3783 |  0.5243 | 1.00e-03
+    3 |   0.8598 |  0.6525 |   1.5888 |  0.5473 | 1.00e-03
+    4 |   0.7636 |  0.6885 |   1.3490 |  0.5363 | 1.00e-03
+    5 |   0.7006 |  0.7112 |   1.3176 |  0.5639 | 1.00e-03
+    6 |   0.6506 |  0.7315 |   1.3989 |  0.5330 | 1.00e-03
+    7 |   0.6123 |  0.7487 |   1.4580 |  0.5785 | 1.00e-03
+    8 |   0.5800 |  0.7611 |   1.4564 |  0.5503 | 1.00e-03
+    9 |   0.5437 |  0.7754 |   1.6113 |  0.5553 | 1.00e-03
+   10 |   0.5186 |  0.7868 |   1.6317 |  0.5306 | 1.00e-03
+   11 |   0.5030 |  0.7936 |   1.7491 |  0.5330 | 1.00e-03
+   12 |   0.4796 |  0.8021 |   2.1472 |  0.5258 | 1.00e-03
+   13 |   0.4678 |  0.8063 |   1.8520 |  0.5304 | 1.00e-03
+   14 |   0.4509 |  0.8147 |   1.8372 |  0.5384 | 5.00e-04
+   15 |   0.3916 |  0.8397 |   2.1887 |  0.5283 | 5.00e-04
+   16 |   0.3743 |  0.8461 |   1.9715 |  0.5438 | 5.00e-04
+   17 |   0.3686 |  0.8482 |   2.3266 |  0.5425 | 5.00e-04
+   18 |   0.3578 |  0.8520 |   2.4287 |  0.4978 | 5.00e-04
+   19 |   0.3528 |  0.8559 |   2.7104 |  0.5162 | 5.00e-04
+   20 |   0.3465 |  0.8584 |   2.5080 |  0.5153 | 5.00e-04
+   21 |   0.3440 |  0.8597 |   2.5815 |  0.5049 | 2.50e-04
+   22 |   0.3103 |  0.8737 |   2.8829 |  0.4974 | 2.50e-04
+   23 |   0.3060 |  0.8747 |   2.9992 |  0.5066 | 2.50e-04
+   24 |   0.3035 |  0.8763 |   3.1496 |  0.5285 | 2.50e-04
+   25 |   0.2990 |  0.8785 |   3.1500 |  0.4943 | 2.50e-04
+   26 |   0.2969 |  0.8794 |   3.1863 |  0.5193 | 2.50e-04
+   27 |   0.2957 |  0.8792 |   3.3821 |  0.4958 | 2.50e-04
+   28 |   0.2924 |  0.8816 |   3.4363 |  0.5089 | 1.25e-04
+   29 |   0.2767 |  0.8884 |   3.4249 |  0.5188 | 1.25e-04
+   30 |   0.2735 |  0.8891 |   3.5501 |  0.5118 | 1.25e-04
+   31 |   0.2698 |  0.8907 |   3.6163 |  0.5112 | 1.25e-04
+   32 |   0.2702 |  0.8905 |   3.5777 |  0.4948 | 1.25e-04
+   33 |   0.2683 |  0.8907 |   3.8081 |  0.5101 | 1.25e-04
+   34 |   0.2701 |  0.8902 |   3.9921 |  0.4978 | 1.25e-04
+   35 |   0.2683 |  0.8904 |   3.5170 |  0.5017 | 6.25e-05
+   36 |   0.2589 |  0.8948 |   3.7218 |  0.4978 | 6.25e-05
+   37 |   0.2574 |  0.8956 |   3.5296 |  0.4947 | 6.25e-05
+   38 |   0.2554 |  0.8963 |   3.7186 |  0.5040 | 6.25e-05
+   39 |   0.2562 |  0.8960 |   3.8034 |  0.5014 | 6.25e-05
+   40 |   0.2541 |  0.8963 |   3.8336 |  0.5061 | 6.25e-05
+   41 |   0.2537 |  0.8976 |   3.7000 |  0.5126 | 6.25e-05
+   42 |   0.2530 |  0.8971 |   3.8479 |  0.5069 | 3.13e-05
+   43 |   0.2535 |  0.8983 |   3.8290 |  0.5071 | 3.13e-05
+   44 |   0.2488 |  0.8992 |   3.4848 |  0.4961 | 3.13e-05
+   45 |   0.2494 |  0.8991 |   4.0224 |  0.5136 | 3.13e-05
+   46 |   0.2488 |  0.8991 |   3.8669 |  0.5130 | 3.13e-05
+   47 |   0.2488 |  0.8997 |   3.9302 |  0.5117 | 3.13e-05
+   48 |   0.2480 |  0.8997 |   3.9979 |  0.5127 | 3.13e-05
+   49 |   0.2464 |  0.8994 |   3.6676 |  0.5011 | 1.56e-05
+   50 |   0.2453 |  0.8993 |   3.7606 |  0.4967 | 1.56e-05
+
+============================================================
+
+Test Loss: 1.8291  Accuracy: 0.5313
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     RUL>400       0.73      0.76      0.74      2947
+     RUL>300       0.51      0.44      0.47      2947
+     RUL>200       0.41      0.34      0.37      2947
+     RUL>100       0.38      0.42      0.40      2947
+     RUL<100       0.60      0.70      0.64      2947
+
+    accuracy                           0.53     14735
+   macro avg       0.53      0.53      0.53     14735
+weighted avg       0.53      0.53      0.53     14735
+
+Confusion Matrix:
+[[2241  621   54   18   13]
+ [ 456 1301  782  268  140]
+ [ 183  515 1004 1023  222]
+ [  97  134  486 1226 1004]
+ [  97    5  113  676 2056]]
+
+Saved to ./checkpoints/NMC/
