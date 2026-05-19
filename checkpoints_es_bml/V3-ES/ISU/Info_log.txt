@@ -1,0 +1,193 @@
+Device: cuda
+Logging to: ./checkpoints_es_bml/ISU\Info_log.txt
+
+Loading data...
+Loading BML .npz feature files...
+  Loaded 240 BML cells
+TrainCellName = ['ISU-ILCC_G17C1', 'ISU-ILCC_G54C3', 'ISU-ILCC_G56C2', 'ISU-ILCC_G35C1', 'ISU-ILCC_G3C4', 'ISU-ILCC_G1C2',
+                'ISU-ILCC_G13C1', 'ISU-ILCC_G18C1', 'ISU-ILCC_G58C3', 'ISU-ILCC_G61C2', 'ISU-ILCC_G63C4', 'ISU-ILCC_G49C2',
+                'ISU-ILCC_G34C4', 'ISU-ILCC_G46C4', 'ISU-ILCC_G18C2', 'ISU-ILCC_G8C4', 'ISU-ILCC_G19C2', 'ISU-ILCC_G13C2',
+                'ISU-ILCC_G36C3', 'ISU-ILCC_G41C2', 'ISU-ILCC_G47C3', 'ISU-ILCC_G53C1', 'ISU-ILCC_G12C1', 'ISU-ILCC_G33C2',
+                'ISU-ILCC_G29C1', 'ISU-ILCC_G39C2', 'ISU-ILCC_G2C2', 'ISU-ILCC_G52C2', 'ISU-ILCC_G6C2', 'ISU-ILCC_G33C3',
+                'ISU-ILCC_G45C1', 'ISU-ILCC_G32C2', 'ISU-ILCC_G18C4', 'ISU-ILCC_G52C4', 'ISU-ILCC_G25C1', 'ISU-ILCC_G43C2',
+                'ISU-ILCC_G10C3', 'ISU-ILCC_G1C1', 'ISU-ILCC_G29C2', 'ISU-ILCC_G35C4', 'ISU-ILCC_G63C2', 'ISU-ILCC_G42C2',
+                'ISU-ILCC_G4C2', 'ISU-ILCC_G24C4', 'ISU-ILCC_G28C4', 'ISU-ILCC_G24C1', 'ISU-ILCC_G50C1', 'ISU-ILCC_G32C4',
+                'ISU-ILCC_G19C1', 'ISU-ILCC_G55C4', 'ISU-ILCC_G31C3', 'ISU-ILCC_G14C1', 'ISU-ILCC_G7C4', 'ISU-ILCC_G47C4',
+                'ISU-ILCC_G8C1', 'ISU-ILCC_G10C1', 'ISU-ILCC_G8C2', 'ISU-ILCC_G34C1', 'ISU-ILCC_G4C4', 'ISU-ILCC_G27C4',
+                'ISU-ILCC_G41C4', 'ISU-ILCC_G31C4', 'ISU-ILCC_G47C1', 'ISU-ILCC_G20C4', 'ISU-ILCC_G59C3', 'ISU-ILCC_G48C3',
+                'ISU-ILCC_G59C1', 'ISU-ILCC_G6C1', 'ISU-ILCC_G14C2', 'ISU-ILCC_G59C4', 'ISU-ILCC_G43C4', 'ISU-ILCC_G46C3',
+                'ISU-ILCC_G34C2', 'ISU-ILCC_G4C1', 'ISU-ILCC_G12C2', 'ISU-ILCC_G32C3', 'ISU-ILCC_G27C1', 'ISU-ILCC_G23C1',
+                'ISU-ILCC_G61C3', 'ISU-ILCC_G47C2', 'ISU-ILCC_G48C1', 'ISU-ILCC_G58C4', 'ISU-ILCC_G56C4', 'ISU-ILCC_G7C2',
+                'ISU-ILCC_G30C4', 'ISU-ILCC_G9C2', 'ISU-ILCC_G40C1', 'ISU-ILCC_G60C1', 'ISU-ILCC_G39C4', 'ISU-ILCC_G32C1',
+                'ISU-ILCC_G41C1', 'ISU-ILCC_G22C2', 'ISU-ILCC_G37C1', 'ISU-ILCC_G33C4', 'ISU-ILCC_G16C3', 'ISU-ILCC_G51C3',
+                'ISU-ILCC_G33C1', 'ISU-ILCC_G56C1', 'ISU-ILCC_G39C1', 'ISU-ILCC_G2C3', 'ISU-ILCC_G49C3', 'ISU-ILCC_G17C2',
+                'ISU-ILCC_G34C3', 'ISU-ILCC_G59C2', 'ISU-ILCC_G28C3', 'ISU-ILCC_G62C4', 'ISU-ILCC_G36C1', 'ISU-ILCC_G2C1',
+                'ISU-ILCC_G57C3', 'ISU-ILCC_G54C2', 'ISU-ILCC_G49C1', 'ISU-ILCC_G41C3', 'ISU-ILCC_G64C4', 'ISU-ILCC_G3C3',
+                'ISU-ILCC_G2C4', 'ISU-ILCC_G50C4', 'ISU-ILCC_G13C3', 'ISU-ILCC_G3C2', 'ISU-ILCC_G60C2', 'ISU-ILCC_G49C4',
+                'ISU-ILCC_G28C1', 'ISU-ILCC_G10C2', 'ISU-ILCC_G21C3', 'ISU-ILCC_G40C4', 'ISU-ILCC_G16C2', 'ISU-ILCC_G51C2',
+                'ISU-ILCC_G64C1', 'ISU-ILCC_G24C2', 'ISU-ILCC_G30C2', 'ISU-ILCC_G57C2', 'ISU-ILCC_G21C1', 'ISU-ILCC_G29C3',
+                'ISU-ILCC_G61C4', 'ISU-ILCC_G42C3', 'ISU-ILCC_G55C3', 'ISU-ILCC_G37C3', 'ISU-ILCC_G56C3', 'ISU-ILCC_G13C4',
+                'ISU-ILCC_G46C1', 'ISU-ILCC_G21C4', 'ISU-ILCC_G60C4', 'ISU-ILCC_G4C3', 'ISU-ILCC_G27C3', 'ISU-ILCC_G25C2',
+                'ISU-ILCC_G9C1', 'ISU-ILCC_G17C4', 'ISU-ILCC_G50C3', 'ISU-ILCC_G5C3', 'ISU-ILCC_G14C4', 'ISU-ILCC_G53C3',
+                'ISU-ILCC_G27C2', 'ISU-ILCC_G38C3', 'ISU-ILCC_G44C4', 'ISU-ILCC_G57C1', 'ISU-ILCC_G19C4', 'ISU-ILCC_G60C3',
+                'ISU-ILCC_G16C1', 'ISU-ILCC_G22C1', 'ISU-ILCC_G64C3', 'ISU-ILCC_G63C3', 'ISU-ILCC_G58C2', 'ISU-ILCC_G1C3',
+                'ISU-ILCC_G19C3', 'ISU-ILCC_G25C3', 'ISU-ILCC_G5C1', 'ISU-ILCC_G1C4', 'ISU-ILCC_G30C3', 'ISU-ILCC_G55C1',
+                'ISU-ILCC_G23C2', 'ISU-ILCC_G12C3', 'ISU-ILCC_G36C4', 'ISU-ILCC_G53C2', 'ISU-ILCC_G45C2', 'ISU-ILCC_G64C2',
+                'ISU-ILCC_G21C2', 'ISU-ILCC_G38C4', 'ISU-ILCC_G17C3', 'ISU-ILCC_G16C4', 'ISU-ILCC_G50C2', 'ISU-ILCC_G28C2',
+                'ISU-ILCC_G22C4', 'ISU-ILCC_G39C3', 'ISU-ILCC_G45C3', 'ISU-ILCC_G54C4', 'ISU-ILCC_G14C3', 'ISU-ILCC_G45C4',
+                'ISU-ILCC_G58C1', 'ISU-ILCC_G20C1', 'ISU-ILCC_G35C3', 'ISU-ILCC_G57C4', 'ISU-ILCC_G5C4', 'ISU-ILCC_G44C3']
+ValidCellName = ['ISU-ILCC_G8C3', 'ISU-ILCC_G38C1', 'ISU-ILCC_G44C2', 'ISU-ILCC_G29C4', 'ISU-ILCC_G37C4', 'ISU-ILCC_G10C4',
+                'ISU-ILCC_G44C1', 'ISU-ILCC_G35C2', 'ISU-ILCC_G6C3', 'ISU-ILCC_G48C4', 'ISU-ILCC_G23C4', 'ISU-ILCC_G30C1',
+                'ISU-ILCC_G20C3', 'ISU-ILCC_G37C2', 'ISU-ILCC_G63C1', 'ISU-ILCC_G3C1', 'ISU-ILCC_G51C1', 'ISU-ILCC_G7C1',
+                'ISU-ILCC_G22C3', 'ISU-ILCC_G42C1', 'ISU-ILCC_G31C1', 'ISU-ILCC_G46C2', 'ISU-ILCC_G24C3', 'ISU-ILCC_G52C1']
+TestCellName = ['ISU-ILCC_G53C4', 'ISU-ILCC_G48C2', 'ISU-ILCC_G40C2', 'ISU-ILCC_G6C4', 'ISU-ILCC_G23C3', 'ISU-ILCC_G5C2',
+                'ISU-ILCC_G12C4', 'ISU-ILCC_G31C2', 'ISU-ILCC_G51C4', 'ISU-ILCC_G43C3', 'ISU-ILCC_G62C1', 'ISU-ILCC_G9C3',
+                'ISU-ILCC_G55C2', 'ISU-ILCC_G38C2', 'ISU-ILCC_G40C3', 'ISU-ILCC_G54C1', 'ISU-ILCC_G52C3', 'ISU-ILCC_G43C1',
+                'ISU-ILCC_G20C2', 'ISU-ILCC_G62C2', 'ISU-ILCC_G62C3', 'ISU-ILCC_G36C2', 'ISU-ILCC_G7C3', 'ISU-ILCC_G18C3']
+Split — Train: 192  Val: 24   Test: 24
+Building train dataset...
+  Total index entries: 74355
+  Class 0: 14871 samples
+  Class 1: 14871 samples
+  Class 2: 14871 samples
+  Class 3: 14871 samples
+  Class 4: 14871 samples
+  Fitting scalers on subset...
+  Scalers fitted.
+Building val dataset...
+  Total index entries: 7545
+  Class 0: 1509 samples
+  Class 1: 1509 samples
+  Class 2: 1509 samples
+  Class 3: 1509 samples
+  Class 4: 1509 samples
+Building test dataset...
+  Total index entries: 9030
+  Class 0: 1806 samples
+  Class 1: 1806 samples
+  Class 2: 1806 samples
+  Class 3: 1806 samples
+  Class 4: 1806 samples
+summary_feats: 12
+Model parameters: 48,293
+
+Model Summary:
+================================================================================
+  Layer                                  Output Shape                  Params
+--------------------------------------------------------------------------------
+  Conv1d                                 (16, 16, 1000)                    96
+  BatchNorm1d                            (16, 16, 1000)                    32
+  ELU                                    (16, 16, 1000)                     0
+  Dropout                                (16, 16, 1000)                     0
+  MaxPool1d                              (16, 16, 500)                      0
+  Conv1d                                 (16, 32, 500)                  2,592
+  BatchNorm1d                            (16, 32, 500)                     64
+  ELU                                    (16, 32, 500)                      0
+  Dropout                                (16, 32, 500)                      0
+  MaxPool1d                              (16, 32, 250)                      0
+  Conv1d                                 (16, 32, 250)                  5,152
+  BatchNorm1d                            (16, 32, 250)                     64
+  ELU                                    (16, 32, 250)                      0
+  Dropout                                (16, 32, 250)                      0
+  AdaptiveAvgPool1d                      (16, 32, 1)                        0
+  Linear                                 (1, 16, 32)                      416
+  ELU                                    (1, 16, 32)                        0
+  Dropout                                (1, 16, 32)                        0
+  Dropout                                (1, 16, 64)                        0
+  GRU                                    ?                             37,632
+  Dropout                                (1, 64)                            0
+  Linear                                 (1, 32)                        2,080
+  ELU                                    (1, 32)                            0
+  Dropout                                (1, 32)                            0
+  Linear                                 (1, 5)                           165
+================================================================================
+  Total trainable parameters                                           48,293
+================================================================================
+
+No pretrained weights — starting from random init.
+Loss: OrdinalLoss
+
+
+Sparse ES mask  (frozen: cnn, summary_proj, post_gru_drop, head):
+================================================================================
+  Parameter                                             Active/Total      Ratio
+--------------------------------------------------------------------------------
+  gru.weight_ih_l0                                 4,301/6,144        70.00%
+  gru.weight_hh_l0                                 2,151/3,072        70.02%
+  gru.bias_ih_l0                                      96/96          100.00%
+  gru.bias_hh_l0                                      96/96          100.00%
+  gru.weight_ih_l0_reverse                         4,301/6,144        70.00%
+  gru.weight_hh_l0_reverse                         2,151/3,072        70.02%
+  gru.bias_ih_l0_reverse                              96/96          100.00%
+  gru.bias_hh_l0_reverse                              96/96          100.00%
+  gru.weight_ih_l1                                 4,301/6,144        70.00%
+  gru.weight_hh_l1                                 2,151/3,072        70.02%
+  gru.bias_ih_l1                                      96/96          100.00%
+  gru.bias_hh_l1                                      96/96          100.00%
+  gru.weight_ih_l1_reverse                         4,301/6,144        70.00%
+  gru.weight_hh_l1_reverse                         2,151/3,072        70.02%
+  gru.bias_ih_l1_reverse                              96/96          100.00%
+  gru.bias_hh_l1_reverse                              96/96          100.00%
+  head.0.weight                                    1,434/2,048        70.02%
+  head.0.bias                                         32/32          100.00%
+  head.3.weight                                      113/160          70.62%
+  head.3.bias                                          5/5           100.00%
+--------------------------------------------------------------------------------
+  GRU active / GRU total                          28,160/39,877       70.62%
+  GRU active / model total                        28,160/48,293       58.31%
+================================================================================
+
+GRU ES params: 28,160 active / 48,293 model total
+Initial train acc: 0.1996  | val acc: 0.2054   | test acc: 0.2000  | sigma0: 0.0200
+
+  Gen | TrainAcc |   ValAcc |  TestAcc |      Sigma |  Improved
+---------------------------------------------------------------
+    1 |   0.2047 |   0.2146 |   0.2064 |   0.020111 |        no
+    2 |   0.2000 |   0.2000 |   0.2000 |   0.019913 |        no
+    3 |   0.2093 |   0.2270 |   0.2089 |   0.019529 |        no
+    4 |   0.2209 |   0.2398 |   0.2000 |   0.018998 |        no
+    5 |   0.2116 |   0.2386 |   0.2313 |   0.018411 |        no
+    6 |   0.2115 |   0.2581 |   0.2208 |   0.018088 |        no
+    7 |   0.2284 |   0.2603 |   0.2056 |   0.017675 |        no
+    8 |   0.2300 |   0.2599 |   0.2114 |   0.017232 |        no
+    9 |   0.2336 |   0.2734 |   0.2142 |   0.016701 |        no
+   10 |   0.2449 |   0.2592 |   0.2553 |   0.016147 |        no
+   11 |   0.2279 |   0.2535 |   0.2555 |   0.015809 |        no
+   12 |   0.2362 |   0.2732 |   0.2247 |   0.015386 |        no
+   13 |   0.2549 |   0.2663 |   0.2585 |   0.015033 |        no
+   14 |   0.2573 |   0.2979 |   0.2704 |   0.014863 |        no
+   15 |   0.2290 |   0.2716 |   0.2155 |   0.014818 |        no
+   16 |   0.2769 |   0.3078 |   0.2708 |   0.014629 |        no
+   17 |   0.2460 |   0.2969 |   0.2216 |   0.014339 |        no
+   18 |   0.2666 |   0.2986 |   0.2355 |   0.014030 |        no
+   19 |   0.2571 |   0.2925 |   0.2523 |   0.013682 |        no
+   20 |   0.2722 |   0.3173 |   0.2763 |   0.013289 |        no
+
+CMA-ES stopped: {'maxiter': 20}
+
+============================================================
+
+Test Loss: 2.3517  Accuracy: 0.2000
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     RUL>400       0.00      0.00      0.00      1806
+     RUL>300       0.20      0.95      0.33      1806
+     RUL>200       0.00      0.00      0.00      1806
+     RUL>100       0.00      0.00      0.00      1806
+     RUL<100       0.20      0.05      0.08      1806
+
+    accuracy                           0.20      9030
+   macro avg       0.08      0.20      0.08      9030
+weighted avg       0.08      0.20      0.08      9030
+
+Confusion Matrix:
+[[   0 1602    0  107   97]
+ [   0 1709    0    0   97]
+ [   0 1708    0    0   98]
+ [   0 1706    0    0  100]
+ [   0 1709    0    0   97]]
+
+Saved to ./checkpoints_es_bml/ISU/
+Saved heatmap: ./checkpoints_es_bml/ISU\weight_heatmaps\gru_weight_heatmaps.png

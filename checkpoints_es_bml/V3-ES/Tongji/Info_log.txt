@@ -1,0 +1,171 @@
+Device: cuda
+Logging to: ./checkpoints_es_bml/Tongji\Info_log.txt
+
+Loading data...
+Loading BML .npz feature files...
+  Loaded 97 BML cells
+TrainCellName = ['Tongji1_CY25-025_1--6', 'Tongji2_CY45-05_1--28', 'Tongji3_CY25-05_2--1', 'Tongji1_CY45-05_1--12', 'Tongji1_CY25-1_1--6', 'Tongji2_CY45-05_1--12',
+                'Tongji1_CY25-05_1--10', 'Tongji2_CY25-05_1--5', 'Tongji2_CY35-05_1--1', 'Tongji1_CY25-1_1--4', 'Tongji2_CY45-05_1--15', 'Tongji2_CY45-05_1--18',
+                'Tongji1_CY45-05_1--13', 'Tongji1_CY25-025_1--1', 'Tongji2_CY45-05_1--25', 'Tongji2_CY45-05_1--11', 'Tongji1_CY25-05_1--13', 'Tongji1_CY25-1_1--7',
+                'Tongji1_CY45-05_1--17', 'Tongji1_CY45-05_1--26', 'Tongji1_CY25-05_1--2', 'Tongji3_CY25-05_1--1', 'Tongji2_CY45-05_1--16', 'Tongji1_CY25-025_1--7',
+                'Tongji3_CY25-05_2--2', 'Tongji1_CY25-025_1--3', 'Tongji1_CY45-05_1--20', 'Tongji2_CY45-05_1--23', 'Tongji3_CY25-05_1--2', 'Tongji1_CY25-025_1--5',
+                'Tongji2_CY45-05_1--22', 'Tongji3_CY25-05_1--3', 'Tongji1_CY25-05_1--5', 'Tongji2_CY45-05_1--26', 'Tongji1_CY45-05_1--18', 'Tongji2_CY45-05_1--14',
+                'Tongji1_CY35-05_1--1', 'Tongji1_CY45-05_1--7', 'Tongji1_CY25-1_1--1', 'Tongji3_CY25-05_2--3', 'Tongji2_CY45-05_1--13', 'Tongji1_CY25-05_1--18',
+                'Tongji1_CY45-05_1--22', 'Tongji1_CY45-05_1--5', 'Tongji2_CY25-05_1--16', 'Tongji1_CY45-05_1--2', 'Tongji1_CY25-05_1--12', 'Tongji2_CY25-05_1--8',
+                'Tongji1_CY25-1_1--9', 'Tongji1_CY25-05_1--19', 'Tongji1_CY45-05_1--19', 'Tongji2_CY45-05_1--21', 'Tongji2_CY45-05_1--1', 'Tongji1_CY45-05_1--1',
+                'Tongji1_CY25-1_1--8', 'Tongji1_CY45-05_1--9', 'Tongji2_CY45-05_1--17', 'Tongji2_CY45-05_1--27', 'Tongji1_CY45-05_1--28', 'Tongji1_CY45-05_1--23',
+                'Tongji1_CY25-05_1--1', 'Tongji2_CY45-05_1--8', 'Tongji1_CY25-05_1--14', 'Tongji2_CY45-05_1--24', 'Tongji1_CY45-05_1--16', 'Tongji1_CY25-05_1--7',
+                'Tongji1_CY25-05_1--4', 'Tongji1_CY45-05_1--10', 'Tongji2_CY35-05_1--2', 'Tongji1_CY45-05_1--21', 'Tongji1_CY25-05_1--15', 'Tongji1_CY45-05_1--27',
+                'Tongji1_CY25-05_1--17', 'Tongji1_CY25-05_1--16', 'Tongji2_CY35-05_1--4', 'Tongji1_CY45-05_1--11', 'Tongji2_CY35-05_1--3', 'Tongji2_CY45-05_1--2',
+                'Tongji1_CY25-05_1--11']
+ValidCellName = ['Tongji1_CY45-05_1--8', 'Tongji1_CY25-05_1--6', 'Tongji2_CY45-05_1--19', 'Tongji1_CY25-05_1--3', 'Tongji1_CY35-05_1--2', 'Tongji1_CY45-05_1--15',
+                'Tongji3_CY25-05_4--1', 'Tongji1_CY25-1_1--5', 'Tongji1_CY45-05_1--25']
+TestCellName = ['Tongji1_CY45-05_1--14', 'Tongji1_CY25-025_1--4', 'Tongji1_CY25-1_1--3', 'Tongji1_CY25-1_1--2', 'Tongji1_CY45-05_1--24', 'Tongji2_CY45-05_1--20',
+                'Tongji3_CY25-05_4--3', 'Tongji3_CY25-05_4--2', 'Tongji2_CY25-05_1--15']
+Split — Train: 79  Val: 9   Test: 9
+Building train dataset...
+  Total index entries: 17055
+  Class 0: 3411 samples
+  Class 1: 3411 samples
+  Class 2: 3411 samples
+  Class 3: 3411 samples
+  Class 4: 3411 samples
+  Fitting scalers on subset...
+  Scalers fitted.
+Building val dataset...
+  Total index entries: 1630
+  Class 0: 326 samples
+  Class 1: 326 samples
+  Class 2: 326 samples
+  Class 3: 326 samples
+  Class 4: 326 samples
+Building test dataset...
+  Total index entries: 1965
+  Class 0: 393 samples
+  Class 1: 393 samples
+  Class 2: 393 samples
+  Class 3: 393 samples
+  Class 4: 393 samples
+summary_feats: 12
+Model parameters: 48,293
+
+Model Summary:
+================================================================================
+  Layer                                  Output Shape                  Params
+--------------------------------------------------------------------------------
+  Conv1d                                 (16, 16, 1000)                    96
+  BatchNorm1d                            (16, 16, 1000)                    32
+  ELU                                    (16, 16, 1000)                     0
+  Dropout                                (16, 16, 1000)                     0
+  MaxPool1d                              (16, 16, 500)                      0
+  Conv1d                                 (16, 32, 500)                  2,592
+  BatchNorm1d                            (16, 32, 500)                     64
+  ELU                                    (16, 32, 500)                      0
+  Dropout                                (16, 32, 500)                      0
+  MaxPool1d                              (16, 32, 250)                      0
+  Conv1d                                 (16, 32, 250)                  5,152
+  BatchNorm1d                            (16, 32, 250)                     64
+  ELU                                    (16, 32, 250)                      0
+  Dropout                                (16, 32, 250)                      0
+  AdaptiveAvgPool1d                      (16, 32, 1)                        0
+  Linear                                 (1, 16, 32)                      416
+  ELU                                    (1, 16, 32)                        0
+  Dropout                                (1, 16, 32)                        0
+  Dropout                                (1, 16, 64)                        0
+  GRU                                    ?                             37,632
+  Dropout                                (1, 64)                            0
+  Linear                                 (1, 32)                        2,080
+  ELU                                    (1, 32)                            0
+  Dropout                                (1, 32)                            0
+  Linear                                 (1, 5)                           165
+================================================================================
+  Total trainable parameters                                           48,293
+================================================================================
+
+No pretrained weights — starting from random init.
+Loss: OrdinalLoss
+
+
+Sparse ES mask  (frozen: cnn, summary_proj, post_gru_drop, head):
+================================================================================
+  Parameter                                             Active/Total      Ratio
+--------------------------------------------------------------------------------
+  gru.weight_ih_l0                                 4,301/6,144        70.00%
+  gru.weight_hh_l0                                 2,151/3,072        70.02%
+  gru.bias_ih_l0                                      96/96          100.00%
+  gru.bias_hh_l0                                      96/96          100.00%
+  gru.weight_ih_l0_reverse                         4,301/6,144        70.00%
+  gru.weight_hh_l0_reverse                         2,151/3,072        70.02%
+  gru.bias_ih_l0_reverse                              96/96          100.00%
+  gru.bias_hh_l0_reverse                              96/96          100.00%
+  gru.weight_ih_l1                                 4,301/6,144        70.00%
+  gru.weight_hh_l1                                 2,151/3,072        70.02%
+  gru.bias_ih_l1                                      96/96          100.00%
+  gru.bias_hh_l1                                      96/96          100.00%
+  gru.weight_ih_l1_reverse                         4,301/6,144        70.00%
+  gru.weight_hh_l1_reverse                         2,151/3,072        70.02%
+  gru.bias_ih_l1_reverse                              96/96          100.00%
+  gru.bias_hh_l1_reverse                              96/96          100.00%
+  head.0.weight                                    1,434/2,048        70.02%
+  head.0.bias                                         32/32          100.00%
+  head.3.weight                                      113/160          70.62%
+  head.3.bias                                          5/5           100.00%
+--------------------------------------------------------------------------------
+  GRU active / GRU total                          28,160/39,877       70.62%
+  GRU active / model total                        28,160/48,293       58.31%
+================================================================================
+
+GRU ES params: 28,160 active / 48,293 model total
+Initial train acc: 0.1999  | val acc: 0.1994   | test acc: 0.1995  | sigma0: 0.0200
+
+  Gen | TrainAcc |   ValAcc |  TestAcc |      Sigma |  Improved
+---------------------------------------------------------------
+    1 |   0.2647 |   0.2644 |   0.2840 |   0.019880 |        no
+    2 |   0.2761 |   0.2773 |   0.2941 |   0.019544 |        no
+    3 |   0.2102 |   0.2853 |   0.2229 |   0.019408 |        no
+    4 |   0.2544 |   0.2969 |   0.2341 |   0.019380 |        no
+    5 |   0.2667 |   0.3350 |   0.2667 |   0.019235 |        no
+    6 |   0.2140 |   0.3190 |   0.2326 |   0.019053 |        no
+    7 |   0.2756 |   0.3454 |   0.2885 |   0.018704 |        no
+    8 |   0.2315 |   0.3227 |   0.2351 |   0.018399 |        no
+    9 |   0.2696 |   0.3190 |   0.2555 |   0.018048 |        no
+   10 |   0.2824 |   0.3172 |   0.2646 |   0.017762 |        no
+   11 |   0.2684 |   0.3172 |   0.2326 |   0.017702 |        no
+   12 |   0.3169 |   0.3294 |   0.3277 |   0.017476 |        no
+   13 |   0.3018 |   0.3215 |   0.2880 |   0.017247 |        no
+   14 |   0.2824 |   0.3190 |   0.2855 |   0.016942 |        no
+   15 |   0.3077 |   0.3227 |   0.3089 |   0.016616 |        no
+   16 |   0.3124 |   0.3374 |   0.3364 |   0.016449 |        no
+   17 |   0.3405 |   0.3417 |   0.3374 |   0.016292 |        no
+   18 |   0.3169 |   0.3350 |   0.3349 |   0.016144 |        no
+   19 |   0.3099 |   0.3577 |   0.2891 |   0.015870 |        no
+   20 |   0.3478 |   0.3571 |   0.3308 |   0.015626 |        no
+
+CMA-ES stopped: {'maxiter': 20}
+
+============================================================
+
+Test Loss: 2.3463  Accuracy: 0.1995
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     RUL>400       0.00      0.00      0.00       393
+     RUL>300       0.20      0.69      0.31       393
+     RUL>200       0.00      0.00      0.00       393
+     RUL>100       0.00      0.00      0.00       393
+     RUL<100       0.24      0.31      0.27       393
+
+    accuracy                           0.20      1965
+   macro avg       0.09      0.20      0.12      1965
+weighted avg       0.09      0.20      0.12      1965
+
+Confusion Matrix:
+[[  0 270   0  70  53]
+ [  0 270   0  27  96]
+ [  0 270   0   1 122]
+ [  0 272   0   0 121]
+ [  0 271   0   0 122]]
+
+Saved to ./checkpoints_es_bml/Tongji/
+Saved heatmap: ./checkpoints_es_bml/Tongji\weight_heatmaps\gru_weight_heatmaps.png
