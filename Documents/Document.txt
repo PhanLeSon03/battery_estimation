@@ -1,0 +1,28 @@
+Battery Estimation Results
+
+Source workbook: Documents/Result.xlsx
+Sheet: 160526
+
+Results
+
+Method              MIT     HUST    LFP (MIT+HUST)    Tongji    ISU     NMC     ZN-coin
+RF                  90.85   95.83   97.79             0         83.67   52.48   0
+CNN-BiGRU           82.06   84.65   77.77             86.67     54.7    55.71   35.97
+CNN-BiGRU + CMA-ES  20      20	    20			-	  -	  -       -
+Transformer         78.45   71.4    75.13             83.87     48.97   52.23   47.03
+
+Notes
+
+NMC is the mixed dataset of all NMC cells from CALB, ISU, MICH, MICH_EXP, RWTH, and SDU.
+
+Project Folder Organization
+
+Training results for the Transformer and CNN-based models are stored in the checkpoints_clf folder.
+Each subfolder in checkpoints contains the results from a separate training section/version,
+starting with V1 and continuing with V2, V3, and so on.
+
+Early-stopping results are stored in the checkpoints_es_bml folder. This folder follows the
+same structure as checkpoints, but start from V3.
+
+The predict_file folder stores the prediction outputs for each dataset. Its structure also
+matches the versioned layout used above, with folders such as V1, V2, and later versions.
