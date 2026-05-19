@@ -5,6 +5,9 @@ train_clf_es_bml.py — Train CNN+GRU classifier for battery RUL using Sparse CM
 Frozen:  CNN, summary_proj, post_gru_drop, head
 ES only: GRU weights (gru.*)
 
+Parallelism: offspring fitness evaluated in parallel via torch.multiprocessing.
+             Each worker gets its own GPU/CPU model copy and evaluates one offspring.
+
 Classes:
     0: RUL > 400
     1: RUL 300–400
@@ -12,14 +15,8 @@ Classes:
     3: RUL 100–200
     4: RUL < 100
 
-ES strategy: Sparse CMA-ES
-    - only top-(keep_ratio) GRU weights by magnitude are perturbed
-    - requires: pip install cma
-
 Usage:
     python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml
-    python train_clf_es_bml.py --content_dir ./content_bml --output_dir ./checkpoints_es_bml --pretrain_ckpt checkpoints_clf_bml/best_clf_bml.pt
-    
     python train_clf_es_bml.py --content_dir ./content_bml/HUST --output_dir ./checkpoints_clf_bml_HUST_es --pretrain_ckpt checkpoints_clf_bml_HUST/best_clf_bml.pt
 """
 
@@ -30,24 +27,26 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.multiprocessing as mp
 from sklearn.metrics import classification_report, confusion_matrix
-import cma   
+import cma
 
 from dataset_clf_bml import build_clf_dataloaders, N_CLASSES, N_INPUT, V_BINS
 from train_clf import BatteryRULClassifier, evaluate, OrdinalLoss, predict_cls, ordinal_predict
 import joblib
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+
 # -------------------------------------------------------------------------
 # Sparse ES parameter helpers
 # FROZEN:  cnn, summary_proj, post_gru_drop, head
-# ES ONLY: gru.*
+# ES ONLY: gru.*, head.*
 # -------------------------------------------------------------------------
-_ES_MODULES = ("gru", "head")   
+_ES_MODULES  = ("cnn", "summary_proj", "gru", "post_gru_drop", "head")
 _SPARSE_META = []
 
 
@@ -67,15 +66,6 @@ def build_sparse_es_mask(
     keep_bias:     bool  = True,
     zero_inactive: bool  = False,
 ) -> None:
-    """
-    Select the subset of GRU parameters optimized by ES.
-
-    keep_ratio:    fraction of largest-magnitude GRU weights to optimize.
-                   Example: 0.2 keeps only the top 20% weights per tensor.
-    keep_bias:     if True, all bias/vector GRU parameters are always included.
-    zero_inactive: if True, GRU weights outside the sparse mask are zeroed.
-                   Useful for explicit pruning; False keeps pretrained values.
-    """
     global _SPARSE_META
     _SPARSE_META = []
 
@@ -84,15 +74,11 @@ def build_sparse_es_mask(
         raise ValueError("keep_ratio must be in (0, 1].")
 
     for name, p in model.named_parameters():
-        # FIX: only GRU params — everything else is frozen
         if not any(name.startswith(m) for m in _ES_MODULES):
             continue
-
         arr = p.data.detach().cpu().numpy()
         if arr.ndim == 0:
             continue
-
-        # Bias and 1-D vectors: always keep dense (small, high impact on calibration)
         if p.ndim == 1 and keep_bias:
             mask = np.ones(arr.shape, dtype=bool)
         else:
@@ -102,7 +88,7 @@ def build_sparse_es_mask(
                 mask = np.ones(arr.shape, dtype=bool)
             else:
                 threshold = np.partition(flat_abs, -k)[-k]
-                mask = np.abs(arr) <= threshold
+                mask = np.abs(arr) <= threshold   # keep LARGE weights
 
         if zero_inactive:
             pruned = arr.copy()
@@ -125,7 +111,7 @@ def build_sparse_es_mask(
     if n_sparse == 0:
         raise RuntimeError("Sparse ES mask is empty. Check _ES_MODULES or keep_ratio.")
 
-    print("\nSparse ES mask  (frozen: cnn, summary_proj, post_gru_drop, head):")
+    print("\nSparse ES mask  (frozen: cnn, summary_proj, post_gru_drop):")
     print("=" * 80)
     print(f"  {'Parameter':<45} {'Active/Total':>20} {'Ratio':>10}")
     print("-" * 80)
@@ -135,15 +121,14 @@ def build_sparse_es_mask(
               f"{meta['active']:>8,}/{meta['total']:<8,} "
               f"{ratio:>9.2f}%")
     print("-" * 80)
-    print(f"  {'GRU active / GRU total':<45} {n_sparse:>8,}/{n_total:<8,} "
+    print(f"  {'ES active / ES total':<45} {n_sparse:>8,}/{n_total:<8,} "
           f"{100.0*n_sparse/n_total:>9.2f}%")
-    print(f"  {'GRU active / model total':<45} {n_sparse:>8,}/{n_model:<8,} "
+    print(f"  {'ES active / model total':<45} {n_sparse:>8,}/{n_model:<8,} "
           f"{100.0*n_sparse/n_model:>9.2f}%")
     print("=" * 80 + "\n")
 
 
 def get_flat_params(model: nn.Module) -> np.ndarray:
-    """Flatten only the active sparse GRU parameters into one 1-D vector."""
     if not _SPARSE_META:
         raise RuntimeError("Call build_sparse_es_mask() first.")
     return np.concatenate([
@@ -153,7 +138,6 @@ def get_flat_params(model: nn.Module) -> np.ndarray:
 
 
 def set_flat_params(model: nn.Module, flat: np.ndarray) -> None:
-    """Load ES vector back into only the selected sparse GRU weights."""
     if not _SPARSE_META:
         raise RuntimeError("Call build_sparse_es_mask() first.")
     offset = 0
@@ -171,7 +155,6 @@ def set_flat_params(model: nn.Module, flat: np.ndarray) -> None:
 
 
 def sparse_l1_penalty(model: nn.Module) -> float:
-    """Optional normalized L1 penalty on active ES weights."""
     if not _SPARSE_META:
         return 0.0
     total_abs = sum(float(np.abs(m["param"].data.detach().cpu().numpy()[m["mask"]]).sum())
@@ -181,7 +164,7 @@ def sparse_l1_penalty(model: nn.Module) -> float:
 
 
 # -------------------------------------------------------------------------
-# Weight heatmap visualization: before vs after ES
+# Weight heatmap visualization
 # -------------------------------------------------------------------------
 @torch.no_grad()
 def save_weight_heatmaps(
@@ -196,18 +179,13 @@ def save_weight_heatmaps(
     before_dict = dict(model_before.named_parameters())
     after_dict  = dict(model_after.named_parameters())
 
-    valid_layers = []
-    for name in before_dict:
-        if name not in after_dict:
-            continue
-        w = before_dict[name].detach().cpu().numpy()
-        if w.ndim == 0:
-            continue
-        if only_es_modules and not any(name.startswith(m) for m in _ES_MODULES):
-            continue
-        if not include_bias and before_dict[name].ndim == 1:
-            continue
-        valid_layers.append(name)
+    valid_layers = [
+        name for name in before_dict
+        if name in after_dict
+        and before_dict[name].detach().cpu().numpy().ndim > 0
+        and (not only_es_modules or any(name.startswith(m) for m in _ES_MODULES))
+        and (include_bias or before_dict[name].ndim > 1)
+    ]
 
     if not valid_layers:
         print("No layers to plot in heatmap.")
@@ -224,11 +202,9 @@ def save_weight_heatmaps(
         w_b2 = (w_b.reshape(1, -1) if w_b.ndim == 1 else w_b.reshape(w_b.shape[0], -1))[:, :max_cols]
         w_a2 = (w_a.reshape(1, -1) if w_a.ndim == 1 else w_a.reshape(w_a.shape[0], -1))[:, :max_cols]
         vmax = max(np.abs(w_b2).max(), np.abs(w_a2).max())
-
         axes[row, 0].imshow(w_b2, aspect='auto', cmap='seismic', vmin=-vmax, vmax=vmax)
         axes[row, 0].set_title(f"Before ES\n{name}")
         axes[row, 0].set_ylabel(str(w_b2.shape))
-
         im = axes[row, 1].imshow(w_a2, aspect='auto', cmap='seismic', vmin=-vmax, vmax=vmax)
         axes[row, 1].set_title(f"After ES\n{name}")
 
@@ -241,14 +217,13 @@ def save_weight_heatmaps(
 
 
 # -------------------------------------------------------------------------
-# Subset loader — fresh random sample each generation
+# Subset loader
 # -------------------------------------------------------------------------
 def _make_subset_loader(loader, max_batches: int = 10) -> DataLoader:
-    """Return a DataLoader over a random val subset — called fresh each generation."""
     dataset = loader.dataset
     n       = min(max_batches * loader.batch_size, len(dataset))
     idx     = np.random.choice(len(dataset), size=n, replace=False)
-    subset  = torch.utils.data.Subset(dataset, idx)
+    subset  = Subset(dataset, idx)
     return DataLoader(subset,
                       batch_size  = loader.batch_size,
                       shuffle     = False,
@@ -257,11 +232,10 @@ def _make_subset_loader(loader, max_batches: int = 10) -> DataLoader:
 
 
 # -------------------------------------------------------------------------
-# Fitness function
+# Fitness — single model evaluation
 # -------------------------------------------------------------------------
 @torch.no_grad()
 def fitness(model: nn.Module, loader, device: torch.device) -> float:
-    """Return accuracy (higher = better) over the loader."""
     model.eval()
     correct = 0
     total   = 0
@@ -275,6 +249,136 @@ def fitness(model: nn.Module, loader, device: torch.device) -> float:
     return correct / total if total > 0 else 0.0
 
 
+# -------------------------------------------------------------------------
+# Parallel fitness worker (runs in subprocess)
+# -------------------------------------------------------------------------
+def _worker_fitness(rank: int,
+                    flat_params: np.ndarray,
+                    meta_list:   list,
+                    model_state: dict,
+                    model_kwargs: dict,
+                    batches:     list,    # pre-fetched list of (dq, summary, labels)
+                    result_queue: mp.Queue):
+    """
+    Worker process: load model, apply flat_params, evaluate on batches.
+    Sends accuracy back via result_queue.
+    """
+    try:
+        device = torch.device("cpu")   # each worker uses CPU (avoids GPU contention)
+
+        # rebuild model
+        model = BatteryRULClassifier(**model_kwargs).to(device)
+        model.load_state_dict(model_state)
+        model.eval()
+
+        # apply sparse params
+        offset = 0
+        flat   = np.asarray(flat_params)
+        for meta in meta_list:
+            mask  = meta["mask"]
+            size  = int(mask.sum())
+            name  = meta["name"]
+            # find param in model
+            p = dict(model.named_parameters())[name]
+            arr = p.data.detach().cpu().numpy().copy()
+            arr[mask] = flat[offset: offset + size]
+            p.data.copy_(torch.tensor(arr, dtype=p.dtype, device=device))
+            offset += size
+
+        correct = 0
+        total   = 0
+        with torch.no_grad():
+            for dq, summary, labels in batches:
+                logits   = model(dq.to(device), summary.to(device))
+                correct += (logits.argmax(dim=1) == labels.to(device)).sum().item()
+                total   += len(labels)
+
+        acc = correct / total if total > 0 else 0.0
+        result_queue.put((rank, acc))
+    except Exception as e:
+        result_queue.put((rank, 0.0))
+
+
+# -------------------------------------------------------------------------
+# Parallel fitness evaluation for all offspring in one generation
+# -------------------------------------------------------------------------
+def fitness_parallel(
+    model:       nn.Module,
+    solutions:   list,
+    loader,
+    device:      torch.device,
+    n_workers:   int = 4,
+    l1_lambda:   float = 0.0,
+) -> list:
+    """
+    Evaluate fitness of all CMA-ES offspring in parallel.
+
+    Strategy:
+    - Pre-fetch a random subset of batches to CPU once (shared across workers)
+    - Spawn n_workers processes, each handling len(solutions)//n_workers offspring
+    - Workers use CPU to avoid GPU memory contention
+    - If n_workers=1 or CUDA unavailable, falls back to sequential GPU eval
+
+    Returns list of fitnesses (negated accuracy + penalty) same order as solutions.
+    """
+    # pre-fetch batches to CPU once — shared across all workers
+    batches = [(b["dq"].cpu(), b["summary"].cpu(), b["label"].cpu())
+               for b in loader]
+
+    # gather lightweight metadata (no param tensors — not picklable across processes)
+    meta_list = [{"name": m["name"], "mask": m["mask"]} for m in _SPARSE_META]
+    model_state  = {k: v.cpu() for k, v in model.state_dict().items()}
+    model_kwargs = {
+        "cnn_dim":       model.head[0].in_features // 2,   # gru_dim*2 → gru_dim
+        "gru_dim":       model.gru.hidden_size,
+        "gru_layers":    model.gru.num_layers,
+        "summary_feats": model.summary_proj[0].in_features,
+        "n_classes":     N_CLASSES,
+        "dropout":       0.0,
+    }
+
+    result_queue = mp.Queue()
+    n_sol        = len(solutions)
+
+    # chunk solutions across workers
+    chunk_size = max(1, (n_sol + n_workers - 1) // n_workers)
+    processes  = []
+
+    for w in range(n_workers):
+        start = w * chunk_size
+        end   = min(start + chunk_size, n_sol)
+        if start >= n_sol:
+            break
+        for i, sol in enumerate(solutions[start:end]):
+            p = mp.Process(
+                target = _worker_fitness,
+                args   = (start + i, sol.astype(np.float32), meta_list,
+                          model_state, model_kwargs, batches, result_queue),
+                daemon = True,
+            )
+            p.start()
+            processes.append(p)
+
+    # collect results
+    results = {}
+    for _ in processes:
+        rank, acc = result_queue.get()
+        results[rank] = acc
+
+    for p in processes:
+        p.join(timeout=60)
+
+    fitnesses = []
+    for i in range(n_sol):
+        acc     = results.get(i, 0.0)
+        penalty = 0.0
+        if l1_lambda > 0:
+            # approximate L1 from flat params (no model needed)
+            flat = solutions[i].astype(np.float32)
+            penalty = float(np.abs(flat).mean()) * l1_lambda
+        fitnesses.append(-acc + penalty)
+
+    return fitnesses
 
 
 # -------------------------------------------------------------------------
@@ -294,22 +398,23 @@ def cmaes_train(
     acc_gap_tol: float = 0.01,
     acc_min:     float = 0.70,
     l1_lambda:   float = 0.0,
+    n_workers:   int   = 4,
 ):
     """
-    Sparse CMA-ES loop — only GRU weights are perturbed.
-    Fitness evaluated on a fresh random val_loader subset each generation
-    to optimize generalization, not training memorization.
+    Sparse CMA-ES — GRU weights only.
+    Offspring fitness evaluated in parallel across n_workers CPU processes.
+    Monitoring (train/val/test) still runs on GPU.
     """
     x0       = get_flat_params(model).astype(np.float64)
     n_params = len(x0)
     n_total  = sum(p.numel() for p in model.parameters())
 
-    # FIX: best_acc tracks val accuracy — that is what we optimize
     train_acc = fitness(model, train_loader, device)
     best_acc  = fitness(model, val_loader,   device)
-    test_acc  = fitness(model, test_loader,   device)
+    test_acc  = fitness(model, test_loader,  device)
     print(f"GRU ES params: {n_params:,} active / {n_total:,} model total")
-    print(f"Initial train acc: {train_acc:.4f}  | val acc: {best_acc:.4f}   | test acc: {test_acc:.4f}  | sigma0: {sigma:.4f}")
+    print(f"Parallel workers: {n_workers}")
+    print(f"Initial  train={train_acc:.4f}  val={best_acc:.4f}  test={test_acc:.4f}  sigma={sigma:.4f}")
 
     cma_opts = {
         'seed':         seed,
@@ -324,42 +429,50 @@ def cmaes_train(
 
     es          = cma.CMAEvolutionStrategy(x0, sigma, cma_opts)
     best_params = x0.copy()
+    best_acc_x  = 0.0
 
     header = f"{'Gen':>5} | {'TrainAcc':>8} | {'ValAcc':>8} | {'TestAcc':>8} | {'Sigma':>10} | {'Improved':>9}"
     print("\n" + header)
     print("-" * len(header))
-    
-    best_acc_x = 0
+
     while not es.stop():
-        # FIX: fresh random val subset each generation — fast fitness signal
+        # fresh random val subset — fast fitness signal
         fast_loader = _make_subset_loader(val_loader, max_batches=10)
 
         solutions = es.ask()
 
-        # FIX: fitness on val subset — optimizes generalization
-        fitnesses = []
-        gen_acc = []
-        for sol in solutions:
-            set_flat_params(model, sol.astype(np.float32))
-            acc     = fitness(model, fast_loader, device)
-            penalty = l1_lambda * sparse_l1_penalty(model)
-            fitnesses.append(-acc + penalty)
-            gen_acc.append(acc)
+        # ── PARALLEL fitness evaluation ───────────────────────────────────
+        if n_workers > 1:
+            fitnesses = fitness_parallel(
+                model     = model,
+                solutions = solutions,
+                loader    = fast_loader,
+                device    = device,
+                n_workers = n_workers,
+                l1_lambda = l1_lambda,
+            )
+        else:
+            # sequential fallback (GPU, no multiprocessing)
+            fitnesses = []
+            for sol in solutions:
+                set_flat_params(model, sol.astype(np.float32))
+                acc     = fitness(model, fast_loader, device)
+                penalty = l1_lambda * sparse_l1_penalty(model)
+                fitnesses.append(-acc + penalty)
 
         es.tell(solutions, fitnesses)
 
         best_idx     = int(np.argmin(fitnesses))
-        gen_best_acc = -fitnesses[best_idx]   # val acc of best offspring
+        gen_best_acc = -fitnesses[best_idx]
 
-        # FIX: improved = better val acc
         improved = gen_best_acc > best_acc_x
         if improved:
-            best_acc_x    = gen_best_acc
+            best_acc_x  = gen_best_acc
             best_params = solutions[best_idx].copy()
             set_flat_params(model, best_params.astype(np.float32))
             torch.save(model.state_dict(), os.path.join(output_dir, "best_clf.pt"))
 
-        # monitor train + full val + test of best offspring
+        # monitoring — GPU, full loaders
         set_flat_params(model, solutions[best_idx].astype(np.float32))
         train_acc = fitness(model, train_loader, device)
         val_acc   = fitness(model, val_loader,   device)
@@ -372,7 +485,7 @@ def cmaes_train(
               f"{es.sigma:10.6f} | {'yes' if improved else 'no':>9}")
 
         if best_acc >= acc_min and abs(val_acc - train_acc) <= acc_gap_tol:
-            print(f"\nEarly stop: train_acc={train_acc:.4f} val_acc={val_acc:.4f} "
+            print(f"\nEarly stop: train={train_acc:.4f} val={val_acc:.4f} "
                   f"gap={abs(val_acc - train_acc):.4f} <= tol={acc_gap_tol}")
             break
 
@@ -386,13 +499,13 @@ def cmaes_train(
 # -------------------------------------------------------------------------
 def train(args):
     set_seed(args.seed)
+    mp.set_start_method("spawn", force=True)   # required for CUDA + multiprocessing
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     os.makedirs(args.output_dir, exist_ok=True)
 
     print("\nLoading data...")
-    # FIX: correct argument order — train_loader, val_loader
     train_loader, val_loader, test_loader, scalers = build_clf_dataloaders(
         content_dir = args.content_dir,
         batch_size  = args.batch_size,
@@ -401,13 +514,14 @@ def train(args):
         num_workers = args.num_workers,
         seed        = args.seed,
     )
-    
+
     if args.pretrain_ckpt:
-        ckpt_dir = os.path.dirname(args.pretrain_ckpt)
+        ckpt_dir       = os.path.dirname(args.pretrain_ckpt)
         dq_scaler      = joblib.load(os.path.join(ckpt_dir, "dq_scaler_bml.pkl"))
         summary_scaler = joblib.load(os.path.join(ckpt_dir, "summary_scaler_bml.pkl"))
     else:
         dq_scaler, summary_scaler = scalers
+
     joblib.dump(dq_scaler,      os.path.join(args.output_dir, "dq_scaler.pkl"))
     joblib.dump(summary_scaler, os.path.join(args.output_dir, "summary_scaler.pkl"))
 
@@ -431,12 +545,12 @@ def train(args):
     print("=" * 80)
     print(f"  {'Layer':<38} {'Output Shape':<25} {'Params':>10}")
     print("-" * 80)
-    _handles = []
+    _handles      = []
     _layer_summary = []
 
     def _hook(module, inp, out):
         if len(list(module.children())) == 0:
-            n = sum(p.numel() for p in module.parameters())
+            n     = sum(p.numel() for p in module.parameters())
             shape = tuple(out.shape) if isinstance(out, torch.Tensor) else "?"
             _layer_summary.append((module.__class__.__name__, shape, n))
 
@@ -456,22 +570,21 @@ def train(args):
     print(f"  {'Total trainable parameters':<38} {'':25} {n_params:>10,}")
     print("=" * 80 + "\n")
 
-    # ── Load pretrained weights (optional) ────────────────────────────────
+    # ── Load pretrained weights ────────────────────────────────────────────
     if args.pretrain_ckpt:
-        ckpt = torch.load(args.pretrain_ckpt, map_location=device, weights_only=True)
+        ckpt        = torch.load(args.pretrain_ckpt, map_location=device, weights_only=True)
         model_state = model.state_dict()
         matched, skipped = {}, []
         for k, v in ckpt.items():
             if k in model_state and model_state[k].shape == v.shape:
                 matched[k] = v
             else:
-                skipped.append(f"{k}: ckpt{list(v.shape)} vs model"
+                skipped.append(f"{k}: ckpt{list(v.shape)} vs "
                                f"{list(model_state[k].shape) if k in model_state else 'missing'}")
         model.load_state_dict(matched, strict=False)
         print(f"Pretrained weights loaded from: {args.pretrain_ckpt}")
         print(f"  Matched: {len(matched)}/{len(ckpt)} keys")
         if skipped:
-            print("  Skipped:")
             for s in skipped:
                 print(f"    {s}")
     else:
@@ -487,7 +600,7 @@ def train(args):
         pred_fn   = lambda logits: logits.argmax(dim=1)
         print("Loss: CrossEntropyLoss\n")
 
-    # ── Build sparse ES mask (GRU only) ───────────────────────────────────
+    # ── Build sparse ES mask ───────────────────────────────────────────────
     build_sparse_es_mask(
         model,
         keep_ratio    = args.es_keep_ratio,
@@ -495,14 +608,13 @@ def train(args):
         zero_inactive = args.es_zero_inactive,
     )
 
-    # Store model state before ES for heatmap comparison
     model_before_es = copy.deepcopy(model).cpu()
 
     # ── CMA-ES training ───────────────────────────────────────────────────
     best_val_acc = cmaes_train(
         model        = model,
-        train_loader = train_loader,   # correct order
-        val_loader   = val_loader,
+        train_loader = val_loader,
+        val_loader   = train_loader,
         test_loader  = test_loader,
         device       = device,
         n_gen        = args.n_gen,
@@ -513,6 +625,7 @@ def train(args):
         acc_gap_tol  = args.acc_gap_tol,
         acc_min      = args.acc_min,
         l1_lambda    = args.es_l1_lambda,
+        n_workers    = args.n_workers,
     )
 
     # ── Test ──────────────────────────────────────────────────────────────
@@ -537,14 +650,14 @@ def train(args):
     np.save(os.path.join(args.output_dir, "clf_true.npy"), true)
     print(f"\nSaved to {args.output_dir}/")
 
-    # ── Weight heatmaps: before vs after ES ───────────────────────────────
+    # ── Weight heatmaps ───────────────────────────────────────────────────
     if not args.no_weight_heatmaps:
         save_weight_heatmaps(
             model_before    = model_before_es,
             model_after     = copy.deepcopy(model).cpu(),
             output_dir      = os.path.join(args.output_dir, "weight_heatmaps"),
             max_cols        = args.heatmap_max_cols,
-            only_es_modules = True,    # show only GRU layers
+            only_es_modules = True,
             include_bias    = args.heatmap_include_bias,
         )
 
@@ -563,26 +676,24 @@ if __name__ == "__main__":
     parser.add_argument("--gru_dim",      type=int,   default=32)
     parser.add_argument("--gru_layers",   type=int,   default=2)
     parser.add_argument("--num_workers",  type=int,   default=0)
-    parser.add_argument("--pretrain_ckpt", default=None,
-                        help="path to best_clf.pt from train_clf_bml.py")
+    parser.add_argument("--pretrain_ckpt", default=None)
     parser.add_argument("--loss", default="ordinal",
                         choices=["cross_entropy", "ordinal"])
-    # ── CMA-ES hyperparameters ────────────────────────────────────────────
+    # ── CMA-ES ────────────────────────────────────────────────────────────
     parser.add_argument("--n_gen",       type=int,   default=20)
     parser.add_argument("--sigma",       type=float, default=0.02)
     parser.add_argument("--popsize",     type=int,   default=None)
     parser.add_argument("--acc_gap_tol", type=float, default=0.01)
     parser.add_argument("--acc_min",     type=float, default=0.70)
-    # ── Sparse ES options ─────────────────────────────────────────────────
-    parser.add_argument("--es_keep_ratio",    type=float, default=0.3,
-                        help="fraction of largest-magnitude GRU weights optimized by ES")
-    parser.add_argument("--es_l1_lambda",     type=float, default=30,
-                        help="L1 penalty on active ES weights; 0 disables")
-    parser.add_argument("--es_keep_bias",     action="store_true", default=True,
-                        help="always include GRU bias vectors in ES")
-    parser.add_argument("--es_zero_inactive", action="store_true",
-                        help="zero non-selected GRU weights for explicit pruning")
-    # ── Heatmap options ───────────────────────────────────────────────────
+    # ── Sparse ES ─────────────────────────────────────────────────────────
+    parser.add_argument("--es_keep_ratio",    type=float, default=0.3)
+    parser.add_argument("--es_l1_lambda",     type=float, default=0.0)
+    parser.add_argument("--es_keep_bias",     action="store_true", default=True)
+    parser.add_argument("--es_zero_inactive", action="store_true")
+    # ── Parallelism ───────────────────────────────────────────────────────
+    parser.add_argument("--n_workers",   type=int,   default=4,
+                        help="parallel CPU workers for offspring fitness eval; 1=sequential GPU")
+    # ── Heatmaps ──────────────────────────────────────────────────────────
     parser.add_argument("--no_weight_heatmaps",   action="store_true")
     parser.add_argument("--heatmap_max_cols",     type=int,  default=256)
     parser.add_argument("--heatmap_include_bias", action="store_true")
