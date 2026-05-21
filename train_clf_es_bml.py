@@ -21,6 +21,7 @@ Usage:
 """
 
 import os
+import sys
 import argparse
 import copy
 import numpy as np
@@ -39,6 +40,21 @@ from torch.utils.data import DataLoader, Subset
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+
+class _Tee:
+    """Mirror writes to multiple streams (e.g. stdout + log file)."""
+    def __init__(self, *streams):
+        self.streams = streams
+
+    def write(self, data):
+        for s in self.streams:
+            s.write(data)
+            s.flush()
+
+    def flush(self):
+        for s in self.streams:
+            s.flush()
 
 
 # -------------------------------------------------------------------------
@@ -501,9 +517,14 @@ def train(args):
     set_seed(args.seed)
     mp.set_start_method("spawn", force=True)   # required for CUDA + multiprocessing
 
+    os.makedirs(args.output_dir, exist_ok=True)
+    log_path = os.path.join(args.output_dir, "Info_data.txt")
+    log_f    = open(log_path, "w", encoding="utf-8")
+    sys.stdout = _Tee(sys.__stdout__, log_f)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
-    os.makedirs(args.output_dir, exist_ok=True)
+    print(f"Logging to: {log_path}")
 
     print("\nLoading data...")
     train_loader, val_loader, test_loader, scalers = build_clf_dataloaders(
@@ -649,6 +670,9 @@ def train(args):
     np.save(os.path.join(args.output_dir, "clf_pred.npy"), pred)
     np.save(os.path.join(args.output_dir, "clf_true.npy"), true)
     print(f"\nSaved to {args.output_dir}/")
+
+    sys.stdout = sys.__stdout__
+    log_f.close()
 
     # ── Weight heatmaps ───────────────────────────────────────────────────
     if not args.no_weight_heatmaps:
