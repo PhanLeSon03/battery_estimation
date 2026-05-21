@@ -34,9 +34,9 @@ from torch.utils.data import DataLoader, Dataset
 
 EOL_FRACTION = 0.80   # capacity retention threshold that defines end-of-life
 
-N_EARLY   = 8     # always include first 8 cycles
-N_RANDOM  = 8     # random consecutive window
-N_INPUT   = N_EARLY + N_RANDOM   # 32 total
+N_EARLY   = 2     # always include first 8 cycles
+N_RANDOM  = 2     # random consecutive window
+N_INPUT   = N_EARLY + N_RANDOM   # 16 total
 N_CLASSES = 5
 
 V_BINS    = 1000
@@ -386,7 +386,7 @@ class BMLBatteryClsDataset(Dataset):
             self.summary_scaler = None
 
     # ── Fit scalers by sampling a subset ─────────────────────────────────
-    def _fit_scalers(self, seed: int, max_fit: int = 10000):
+    def _fit_scalers(self, seed: int, max_fit: int = 20000):
         print("  Fitting scalers on subset...")
         rng    = np.random.default_rng(seed)
         subset = rng.choice(len(self.index),
@@ -456,10 +456,21 @@ def build_clf_dataloaders(
     test_ids = ids[n_val:2*n_val]
     trn_ids = ids[2*n_val:]
 
-    per_line = 4
+    per_line = 6
+    
+    
+    lines = [trn_ids[i:i+per_line] for i in range(0, len(trn_ids), per_line)]
+    inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
+    print(f"TrainCellName = [{inner}]")
+    
+    lines = [val_ids[i:i+per_line] for i in range(0, len(val_ids), per_line)]
+    inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
+    print(f"ValidCellName = [{inner}]")
+    
     lines = [test_ids[i:i+per_line] for i in range(0, len(test_ids), per_line)]
     inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
     print(f"TestCellName = [{inner}]")
+
 
     print(f"Split — Train: {len(trn_ids)}  Val: {len(val_ids)}   Test: {len(test_ids)}")
 

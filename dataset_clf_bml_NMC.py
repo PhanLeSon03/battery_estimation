@@ -12,9 +12,9 @@ Mirrors dataset_clf.py (MIT) exactly. The only intentional differences are:
 
 Classes are fixed (same as MIT):
     0: RUL > 200
-    1: 150 < RUL ≤ 200
-    2: 100 < RUL ≤ 150
-    3: 50 < RUL ≤ 100
+    1: 300 < RUL ≤ 200
+    2: 200 < RUL ≤ 150
+    3: 100 < RUL ≤ 100
     4: RUL ≤ 50
 
 How to run:
@@ -386,7 +386,7 @@ class BMLBatteryClsDataset(Dataset):
             self.summary_scaler = None
 
     # ── Fit scalers by sampling a subset ─────────────────────────────────
-    def _fit_scalers(self, seed: int, max_fit: int = 10000):
+    def _fit_scalers(self, seed: int, max_fit: int = 20000):
         print("  Fitting scalers on subset...")
         rng    = np.random.default_rng(seed)
         subset = rng.choice(len(self.index),
@@ -456,10 +456,21 @@ def build_clf_dataloaders(
     test_ids = ids[n_val:2*n_val]
     trn_ids = ids[2*n_val:]
 
-    per_line = 4
+    per_line = 6
+    
+    
+    lines = [trn_ids[i:i+per_line] for i in range(0, len(trn_ids), per_line)]
+    inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
+    print(f"TrainCellName = [{inner}]")
+    
+    lines = [val_ids[i:i+per_line] for i in range(0, len(val_ids), per_line)]
+    inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
+    print(f"ValidCellName = [{inner}]")
+    
     lines = [test_ids[i:i+per_line] for i in range(0, len(test_ids), per_line)]
     inner = ",\n                ".join(", ".join(f"'{n}'" for n in line) for line in lines)
     print(f"TestCellName = [{inner}]")
+
 
     print(f"Split — Train: {len(trn_ids)}  Val: {len(val_ids)}   Test: {len(test_ids)}")
 
