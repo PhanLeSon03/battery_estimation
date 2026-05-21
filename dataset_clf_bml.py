@@ -34,9 +34,9 @@ from torch.utils.data import DataLoader, Dataset
 
 EOL_FRACTION = 0.80   # capacity retention threshold that defines end-of-life
 
-N_EARLY   = 2     # always include first 8 cycles
-N_RANDOM  = 2     # random consecutive window
-N_INPUT   = N_EARLY + N_RANDOM   # 16 total
+N_EARLY   = 8     # always include first 8 cycles
+N_RANDOM  = 8     # random consecutive window
+N_INPUT   = N_EARLY + N_RANDOM   # 32 total
 N_CLASSES = 5
 
 V_BINS    = 1000

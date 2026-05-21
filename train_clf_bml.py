@@ -17,7 +17,6 @@ Main outputs:
 
 import argparse
 import os
-import sys
 
 import joblib
 import numpy as np
@@ -25,21 +24,6 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import classification_report, confusion_matrix
 import cma
-
-
-class _Tee:
-    """Mirror writes to multiple streams (e.g. stdout + log file)."""
-    def __init__(self, *streams):
-        self.streams = streams
-
-    def write(self, data):
-        for s in self.streams:
-            s.write(data)
-            s.flush()
-
-    def flush(self):
-        for s in self.streams:
-            s.flush()
 
 from dataset_clf_bml import N_CLASSES, N_INPUT, build_clf_dataloaders
 from train_clf import BatteryRULClassifier, OrdinalLoss, evaluate, predict_cls, train_epoch
@@ -172,14 +156,9 @@ def cmaes_run(
 # Main training loop
 # -------------------------------------------------------------------------
 def train(args):
-    os.makedirs(args.output_dir, exist_ok=True)
-    log_path = os.path.join(args.output_dir, "Info_log.txt")
-    log_f    = open(log_path, "w", encoding="utf-8")
-    sys.stdout = _Tee(sys.__stdout__, log_f)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
-    print(f"Logging to: {log_path}")
+    os.makedirs(args.output_dir, exist_ok=True)
 
     print("\nLoading BML data...")
     train_loader, val_loader, test_loader, scalers = build_clf_dataloaders(
@@ -260,6 +239,7 @@ def train(args):
         factor   = 0.5,          # new_lr = lr * factor
         patience = 6,            # wait 6 epochs with no improvement
         min_lr   = args.lr * 0.01,
+        verbose  = True,
     )
 
     best_val_acc     = -1.0
@@ -382,9 +362,6 @@ def train(args):
     np.save(os.path.join(args.output_dir, "clf_pred_bml.npy"), pred)
     np.save(os.path.join(args.output_dir, "clf_true_bml.npy"), true)
     print(f"\nSaved to {args.output_dir}/")
-
-    sys.stdout = sys.__stdout__
-    log_f.close()
 
 
 if __name__ == "__main__":
