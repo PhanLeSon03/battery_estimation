@@ -34,7 +34,7 @@ foreach ($cnn in $cnnDims) {
 
 Write-Host ""
 Write-Host "############################################" -ForegroundColor Magenta
-Write-Host "Model Grid Search  —  $($jobs.Count) runs total" -ForegroundColor Magenta
+Write-Host "Model Grid Search  --  $($jobs.Count) runs total" -ForegroundColor Magenta
 Write-Host "############################################" -ForegroundColor Magenta
 Write-Host "Total jobs  : $($jobs.Count)  (4 cnn x 4 grud x 3 grul x 3 runs)" -ForegroundColor White
 Write-Host "Content dir : $contentDir"                -ForegroundColor White
