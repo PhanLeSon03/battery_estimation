@@ -1,0 +1,187 @@
+Device: cuda
+Logging to: ./checkpoints_clf_bml/LFP_86-4\Info_log.txt
+
+Loading BML data...
+Loading BML .npz feature files...
+  Loaded 246 BML cells
+TrainCellName = ['HUST_4-7', 'HUST_6-5', 'MATR_b3c35', 'MATR_b2c45', 'MATR_b2c18', 'HUST_3-4',
+                'HUST_2-6', 'MATR_b3c33', 'MATR_b3c40', 'MATR_b2c21', 'MATR_b2c14', 'HUST_4-3',
+                'HUST_10-1', 'HUST_3-2', 'MATR_b4c0', 'MATR_b4c21', 'MATR_b2c33', 'MATR_b2c36',
+                'HUST_3-3', 'MATR_b4c29', 'HUST_3-7', 'MATR_b4c6', 'HUST_10-2', 'MATR_b1c39',
+                'HUST_7-7', 'MATR_b2c41', 'MATR_b3c27', 'HUST_1-5', 'MATR_b2c22', 'HUST_8-7',
+                'MATR_b1c21', 'HUST_9-4', 'MATR_b2c2', 'MATR_b4c23', 'MATR_b1c28', 'MATR_b1c4',
+                'MATR_b1c23', 'HUST_3-5', 'MATR_b3c1', 'HUST_7-4', 'MATR_b1c40', 'HUST_1-3',
+                'HUST_4-2', 'HUST_8-8', 'MATR_b2c26', 'MATR_b1c29', 'MATR_b1c31', 'HUST_6-3',
+                'HUST_7-3', 'HUST_8-6', 'HUST_6-8', 'MATR_b3c26', 'MATR_b1c2', 'HUST_3-6',
+                'MATR_b4c13', 'MATR_b1c15', 'HUST_10-5', 'MATR_b4c42', 'MATR_b2c42', 'MATR_b2c35',
+                'HUST_1-1', 'MATR_b3c36', 'MATR_b3c16', 'MATR_b1c25', 'MATR_b2c39', 'HUST_8-2',
+                'MATR_b4c22', 'MATR_b1c16', 'MATR_b3c13', 'HUST_5-1', 'MATR_b4c43', 'MATR_b3c19',
+                'MATR_b4c10', 'MATR_b4c35', 'HUST_10-6', 'MATR_b4c15', 'MATR_b4c8', 'MATR_b2c38',
+                'MATR_b1c26', 'MATR_b2c5', 'HUST_1-6', 'MATR_b1c19', 'MATR_b4c36', 'MATR_b2c44',
+                'MATR_b3c34', 'MATR_b4c40', 'MATR_b3c12', 'MATR_b2c34', 'MATR_b1c1', 'MATR_b4c17',
+                'MATR_b2c1', 'MATR_b4c18', 'MATR_b1c5', 'MATR_b1c17', 'MATR_b2c13', 'HUST_5-7',
+                'MATR_b1c36', 'MATR_b1c24', 'HUST_2-4', 'MATR_b3c20', 'MATR_b1c20', 'MATR_b3c4',
+                'MATR_b1c43', 'HUST_9-5', 'MATR_b3c0', 'HUST_2-7', 'MATR_b2c40', 'MATR_b1c27',
+                'MATR_b4c11', 'HUST_8-5', 'MATR_b4c27', 'MATR_b1c32', 'HUST_9-3', 'MATR_b3c6',
+                'MATR_b3c31', 'MATR_b2c43', 'MATR_b2c17', 'MATR_b4c34', 'MATR_b1c9', 'HUST_9-6',
+                'MATR_b3c17', 'HUST_10-3', 'MATR_b1c7', 'MATR_b3c28', 'MATR_b2c46', 'HUST_8-3',
+                'HUST_1-2', 'HUST_5-4', 'MATR_b2c12', 'HUST_2-3', 'MATR_b3c14', 'MATR_b4c31',
+                'HUST_7-1', 'HUST_9-8', 'MATR_b3c5', 'HUST_5-2', 'HUST_9-1', 'MATR_b4c14',
+                'MATR_b2c20', 'MATR_b3c38', 'MATR_b1c38', 'MATR_b4c7', 'HUST_10-4', 'MATR_b2c32',
+                'HUST_5-5', 'MATR_b4c20', 'MATR_b2c6', 'HUST_8-1', 'HUST_7-5', 'MATR_b3c7',
+                'HUST_3-1', 'MATR_b3c11', 'MATR_b4c16', 'HUST_10-8', 'MATR_b3c24', 'HUST_7-8',
+                'MATR_b1c41', 'MATR_b2c28', 'MATR_b3c39', 'HUST_4-1', 'MATR_b4c2', 'HUST_2-2',
+                'HUST_5-6', 'MATR_b4c33', 'MATR_b4c3', 'MATR_b3c45', 'HUST_4-4', 'HUST_3-8',
+                'HUST_7-6', 'MATR_b4c1', 'HUST_4-5', 'MATR_b1c0', 'MATR_b3c3', 'HUST_6-4',
+                'HUST_1-7', 'MATR_b1c35', 'MATR_b3c22', 'MATR_b2c3', 'MATR_b4c32', 'HUST_5-3',
+                'MATR_b1c42', 'HUST_2-8', 'HUST_2-5', 'MATR_b3c10', 'HUST_8-4', 'HUST_6-2',
+                'MATR_b1c45', 'MATR_b2c30', 'MATR_b3c29', 'MATR_b4c4', 'HUST_10-7', 'MATR_b2c31',
+                'MATR_b3c44', 'HUST_4-6', 'MATR_b1c30', 'MATR_b3c41', 'MATR_b4c12', 'MATR_b2c27']
+ValidCellName = ['MATR_b1c33', 'MATR_b2c37', 'MATR_b4c5', 'MATR_b3c18', 'HUST_9-7', 'MATR_b4c19',
+                'MATR_b1c11', 'HUST_1-4', 'MATR_b3c30', 'MATR_b4c30', 'MATR_b2c24', 'MATR_b2c29',
+                'MATR_b4c38', 'MATR_b4c37', 'MATR_b2c11', 'MATR_b4c39', 'MATR_b4c28', 'MATR_b1c14',
+                'MATR_b4c41', 'MATR_b3c15', 'MATR_b3c9', 'HUST_4-8', 'HUST_9-2', 'MATR_b2c47']
+TestCellName = ['MATR_b1c6', 'MATR_b4c9', 'MATR_b1c18', 'MATR_b4c24', 'MATR_b4c25', 'MATR_b4c26',
+                'MATR_b2c10', 'MATR_b1c3', 'MATR_b3c8', 'MATR_b1c34', 'MATR_b4c44', 'MATR_b2c4',
+                'HUST_1-8', 'MATR_b2c23', 'MATR_b3c21', 'MATR_b2c0', 'MATR_b2c19', 'HUST_7-2',
+                'MATR_b1c44', 'HUST_6-6', 'MATR_b1c37', 'HUST_6-1', 'MATR_b3c25', 'MATR_b2c25']
+Split — Train: 198  Val: 24   Test: 24
+Building train dataset...
+  Total index entries: 91525
+  Class 0: 18305 samples
+  Class 1: 18305 samples
+  Class 2: 18305 samples
+  Class 3: 18305 samples
+  Class 4: 18305 samples
+  Fitting scalers on subset...
+  Scalers fitted.
+Building val dataset...
+  Total index entries: 11350
+  Class 0: 2270 samples
+  Class 1: 2270 samples
+  Class 2: 2270 samples
+  Class 3: 2270 samples
+  Class 4: 2270 samples
+Building test dataset...
+  Total index entries: 9900
+  Class 0: 1980 samples
+  Class 1: 1980 samples
+  Class 2: 1980 samples
+  Class 3: 1980 samples
+  Class 4: 1980 samples
+summary_feats: 12
+Model parameters: 48,293
+
+Model Summary:
+================================================================================
+  Layer                                  Output Shape                  Params
+--------------------------------------------------------------------------------
+  Conv1d                                 (14, 16, 1000)                    96
+  BatchNorm1d                            (14, 16, 1000)                    32
+  ELU                                    (14, 16, 1000)                     0
+  Dropout                                (14, 16, 1000)                     0
+  MaxPool1d                              (14, 16, 500)                      0
+  Conv1d                                 (14, 32, 500)                  2,592
+  BatchNorm1d                            (14, 32, 500)                     64
+  ELU                                    (14, 32, 500)                      0
+  Dropout                                (14, 32, 500)                      0
+  MaxPool1d                              (14, 32, 250)                      0
+  Conv1d                                 (14, 32, 250)                  5,152
+  BatchNorm1d                            (14, 32, 250)                     64
+  ELU                                    (14, 32, 250)                      0
+  Dropout                                (14, 32, 250)                      0
+  AdaptiveAvgPool1d                      (14, 32, 1)                        0
+  Linear                                 (1, 14, 32)                      416
+  ELU                                    (1, 14, 32)                        0
+  Dropout                                (1, 14, 32)                        0
+  Dropout                                (1, 14, 64)                        0
+  GRU                                    ?                             37,632
+  Dropout                                (1, 64)                            0
+  Linear                                 (1, 32)                        2,080
+  ELU                                    (1, 32)                            0
+  Dropout                                (1, 32)                            0
+  Linear                                 (1, 5)                           165
+================================================================================
+  Total trainable parameters                                           48,293
+================================================================================
+
+Loss: OrdinalLoss
+
+Epoch |   TrLoss |   TrAcc |   VaLoss |   VaAcc |       LR
+----------------------------------------------------------
+    1 |   0.5264 |  0.7800 |   0.5086 |  0.7884 | 1.00e-03
+    2 |   0.3579 |  0.8480 |   0.4320 |  0.8133 | 1.00e-03
+    3 |   0.3162 |  0.8656 |   0.4237 |  0.8337 | 1.00e-03
+    4 |   0.2890 |  0.8764 |   0.5406 |  0.7910 | 1.00e-03
+    5 |   0.2634 |  0.8881 |   0.4874 |  0.8187 | 1.00e-03
+    6 |   0.2474 |  0.8953 |   0.5082 |  0.8177 | 1.00e-03
+    7 |   0.2315 |  0.9010 |   0.5207 |  0.8177 | 1.00e-03
+    8 |   0.2182 |  0.9059 |   0.5751 |  0.8046 | 1.00e-03
+    9 |   0.2059 |  0.9129 |   0.5544 |  0.8168 | 1.00e-03
+   10 |   0.1997 |  0.9147 |   0.5921 |  0.8094 | 5.00e-04
+   11 |   0.1679 |  0.9298 |   0.6531 |  0.7992 | 5.00e-04
+   12 |   0.1623 |  0.9308 |   0.6259 |  0.8067 | 5.00e-04
+   13 |   0.1600 |  0.9326 |   0.6949 |  0.7969 | 5.00e-04
+   14 |   0.1578 |  0.9336 |   0.6346 |  0.8147 | 5.00e-04
+   15 |   0.1541 |  0.9351 |   0.5987 |  0.8231 | 5.00e-04
+   16 |   0.1507 |  0.9360 |   0.6420 |  0.8126 | 5.00e-04
+   17 |   0.1479 |  0.9373 |   0.7056 |  0.8016 | 2.50e-04
+   18 |   0.1343 |  0.9438 |   0.7528 |  0.7965 | 2.50e-04
+   19 |   0.1311 |  0.9448 |   0.6860 |  0.8127 | 2.50e-04
+   20 |   0.1299 |  0.9448 |   0.7086 |  0.8021 | 2.50e-04
+   21 |   0.1279 |  0.9458 |   0.7638 |  0.8071 | 2.50e-04
+   22 |   0.1254 |  0.9472 |   0.7267 |  0.8098 | 2.50e-04
+   23 |   0.1284 |  0.9455 |   0.7790 |  0.7975 | 2.50e-04
+   24 |   0.1262 |  0.9468 |   0.7129 |  0.8163 | 1.25e-04
+   25 |   0.1165 |  0.9510 |   0.7347 |  0.8117 | 1.25e-04
+   26 |   0.1173 |  0.9509 |   0.7586 |  0.8075 | 1.25e-04
+   27 |   0.1167 |  0.9505 |   0.7549 |  0.8107 | 1.25e-04
+   28 |   0.1145 |  0.9510 |   0.7672 |  0.8064 | 1.25e-04
+   29 |   0.1155 |  0.9512 |   0.7720 |  0.8087 | 1.25e-04
+   30 |   0.1136 |  0.9519 |   0.7707 |  0.8037 | 1.25e-04
+   31 |   0.1164 |  0.9507 |   0.8931 |  0.7678 | 6.25e-05
+   32 |   0.1108 |  0.9527 |   0.7679 |  0.8111 | 6.25e-05
+   33 |   0.1105 |  0.9540 |   0.7658 |  0.8105 | 6.25e-05
+   34 |   0.1087 |  0.9537 |   0.7547 |  0.8152 | 6.25e-05
+   35 |   0.1092 |  0.9541 |   0.7782 |  0.8114 | 6.25e-05
+   36 |   0.1092 |  0.9543 |   0.7694 |  0.8121 | 6.25e-05
+   37 |   0.1088 |  0.9545 |   0.8050 |  0.8046 | 6.25e-05
+   38 |   0.1072 |  0.9550 |   0.7924 |  0.8068 | 3.13e-05
+   39 |   0.1063 |  0.9560 |   0.8269 |  0.8001 | 3.13e-05
+   40 |   0.1062 |  0.9558 |   0.7941 |  0.8074 | 3.13e-05
+   41 |   0.1069 |  0.9548 |   0.8171 |  0.8041 | 3.13e-05
+   42 |   0.1062 |  0.9556 |   0.7603 |  0.8153 | 3.13e-05
+   43 |   0.1060 |  0.9550 |   0.7523 |  0.8143 | 3.13e-05
+   44 |   0.1059 |  0.9554 |   0.7767 |  0.8096 | 3.13e-05
+   45 |   0.1059 |  0.9552 |   0.7586 |  0.8146 | 1.56e-05
+   46 |   0.1046 |  0.9557 |   0.7724 |  0.8114 | 1.56e-05
+   47 |   0.1046 |  0.9560 |   0.7775 |  0.8104 | 1.56e-05
+   48 |   0.1044 |  0.9564 |   0.7714 |  0.8119 | 1.56e-05
+   49 |   0.1037 |  0.9563 |   0.7758 |  0.8114 | 1.56e-05
+   50 |   0.1040 |  0.9561 |   0.7767 |  0.8131 | 1.56e-05
+
+============================================================
+
+Test Loss: 0.5932  Accuracy: 0.7611
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     RUL>400       0.86      0.81      0.83      1980
+     RUL>300       0.63      0.70      0.66      1980
+     RUL>200       0.65      0.68      0.67      1980
+     RUL>100       0.76      0.79      0.77      1980
+     RUL<100       0.97      0.83      0.89      1980
+
+    accuracy                           0.76      9900
+   macro avg       0.77      0.76      0.77      9900
+weighted avg       0.77      0.76      0.77      9900
+
+Confusion Matrix:
+[[1603  359    9    0    9]
+ [ 264 1386  330    0    0]
+ [   0  472 1348  160    0]
+ [   0    0  375 1562   43]
+ [   0    0    0  344 1636]]
+
+Saved to ./checkpoints_clf_bml/LFP_86-4/
