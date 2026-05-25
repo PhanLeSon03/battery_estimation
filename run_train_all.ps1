@@ -46,7 +46,7 @@ $failed = @()
 # ============================================================
 Write-Host ""
 Write-Host "############################################" -ForegroundColor Magenta
-Write-Host "Dataset build + training ($trainScriptName)" -ForegroundColor Magenta
+Write-Host "Training ($trainScriptName)" -ForegroundColor Magenta
 Write-Host "############################################" -ForegroundColor Magenta
 Write-Host ("Folders to train on ({0}):" -f $folders.Count) -ForegroundColor Magenta
 foreach ($f in $folders) { Write-Host "  - $f" -ForegroundColor Magenta }
@@ -56,26 +56,6 @@ foreach ($folder in $folders) {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "Processing folder: $folder" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
-
-    $nmcVariantFolders = @("Tongji", "NMC", "ISU", "ZN-coin")
-    if ($nmcVariantFolders -contains $folder) {
-        $datasetScript = "dataset_clf_bml_NMC.py"
-    } else {
-        $datasetScript = "dataset_clf_bml.py"
-    }
-    $datasetCmd = "python $datasetScript --content_dir content_bml/$folder"
-    Write-Host ""
-    Write-Host ">> $datasetCmd" -ForegroundColor Yellow
-    Invoke-Expression $datasetCmd
-    $datasetExit = $LASTEXITCODE
-    if ($datasetExit -ne 0 -and -not ($benignExitCodes -contains $datasetExit)) {
-        Write-Host ("ERROR: dataset step failed for {0} (exit code {1}) - skipping to next folder" -f $folder, $datasetExit) -ForegroundColor Red
-        $failed += ("{0} [dataset, exit {1}]" -f $folder, $datasetExit)
-        continue
-    }
-    if ($benignExitCodes -contains $datasetExit) {
-        Write-Host "Note: dataset returned benign teardown exit code $datasetExit - treating as success" -ForegroundColor DarkYellow
-    }
 
     if ($TrainScript -eq "3") {
         $trainCmd = "python $trainScriptName --content_dir ./content_bml/$folder --output_dir ./checkpoints_es_bml --pretrain_ckpt checkpoints/$folder/best_clf_bml.pt"

@@ -48,10 +48,10 @@ foreach ($folder in $rawFolders) {
     Write-Host "Done generating features: $folder" -ForegroundColor Green
 }
 
-# ── Phase 2: dataset_clf_bml.py + train_clf_bml.py ─────────────────────────
+# ── Phase 2: train_clf_bml.py ───────────────────────────────────────────────
 Write-Host ""
 Write-Host "############################################" -ForegroundColor Magenta
-Write-Host "PHASE 2: Dataset build + training" -ForegroundColor Magenta
+Write-Host "PHASE 2: Training" -ForegroundColor Magenta
 Write-Host "############################################" -ForegroundColor Magenta
 Write-Host ("Folders to train on ({0}):" -f $folders.Count) -ForegroundColor Magenta
 foreach ($f in $folders) { Write-Host "  - $f" -ForegroundColor Magenta }
@@ -61,26 +61,6 @@ foreach ($folder in $folders) {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "Processing folder: $folder" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
-
-    $nmcVariantFolders = @("Tongji", "NMC", "ISU", "ZN-coin")
-    if ($nmcVariantFolders -contains $folder) {
-        $datasetScript = "dataset_clf_bml_NMC.py"
-    } else {
-        $datasetScript = "dataset_clf_bml.py"
-    }
-    $datasetCmd = "python $datasetScript --content_dir content_bml/$folder"
-    Write-Host ""
-    Write-Host ">> $datasetCmd" -ForegroundColor Yellow
-    Invoke-Expression $datasetCmd
-    $datasetExit = $LASTEXITCODE
-    if ($datasetExit -ne 0 -and -not ($benignExitCodes -contains $datasetExit)) {
-        Write-Host ("ERROR: dataset step failed for {0} (exit code {1}) - skipping to next folder" -f $folder, $datasetExit) -ForegroundColor Red
-        $failed += ("{0} [dataset, exit {1}]" -f $folder, $datasetExit)
-        continue
-    }
-    if ($benignExitCodes -contains $datasetExit) {
-        Write-Host "Note: dataset returned benign teardown exit code $datasetExit - treating as success" -ForegroundColor DarkYellow
-    }
 
     $trainCmd = "python train_clf_bml.py --content_dir ./content_bml/$folder --output_dir ./checkpoints/$folder"
     Write-Host ""

@@ -23,6 +23,7 @@ How to run:
 """
 
 import argparse
+import os
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -34,9 +35,9 @@ from torch.utils.data import DataLoader, Dataset
 
 EOL_FRACTION = 0.80   # capacity retention threshold that defines end-of-life
 
-N_EARLY   = 2     # always include first 8 cycles
-N_RANDOM  = 2     # random consecutive window
-N_INPUT   = N_EARLY + N_RANDOM   # 16 total
+N_EARLY   = int(os.environ.get("N_EARLY",  4))   # always include first N cycles
+N_RANDOM  = int(os.environ.get("N_RANDOM", 10))  # random consecutive window
+N_INPUT   = N_EARLY + N_RANDOM
 N_CLASSES = 5
 
 V_BINS    = 1000
